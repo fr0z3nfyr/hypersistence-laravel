@@ -24,9 +24,9 @@ class DB extends \PDO {
             self::$conn = new DB(env("DB_CONNECTION", "mysql") . ":"
                     . "host=" . env("DB_HOST", "localhost") . ";"
                     . "dbname=" . env("DB_DATABASE", "laravel_db") . ";"
-                    . "charset=" . env("DB_CHARSET", "utf8mb4") . ","
-                    . env("DB_USERNAME", "root") . ", "
-                    . env("DB_PASSWORD", "root"), array(
+                    . "charset=" . env("DB_CHARSET", "utf8mb4"),
+                    env("DB_USERNAME", "root"),
+                    env("DB_PASSWORD", "root"), array(
                 self::ATTR_PERSISTENT => true,
                 self::ATTR_STATEMENT_CLASS => array('\Hypersistence\Core\Statement'),
                 self::ATTR_PERSISTENT => false)

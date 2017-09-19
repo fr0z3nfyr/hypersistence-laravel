@@ -12,7 +12,7 @@ class CreateModelsHypersistence extends Command {
      *
      * @var string
      */
-    protected $signature = 'hypersistence:make-models {directory?}';
+    protected $signature = 'hypersistence:make-models {directory?} {--override}';
 
     /**
      * The console command description.
@@ -47,7 +47,7 @@ class CreateModelsHypersistence extends Command {
         $use = "use Hypersistence\Hypersistence";
         $extends = "Hypersistence";
         $dir = !is_null($this->argument('directory')) ? $this->argument('directory') : 'app/Models';
-
+        $overide = $this->getOption('override');
         if (!file_exists($dir)) {
             mkdir($dir);
         }
@@ -179,7 +179,7 @@ class CreateModelsHypersistence extends Command {
             $className = $this->camelCase($t);
             $fileName = "$dir/$className.php";
 
-            if (isset($data['isManyToMany']) || file_exists($fileName)) {
+            if (isset($data['isManyToMany']) || (file_exists($fileName) && !$override)) {
                 continue;
             }
 
