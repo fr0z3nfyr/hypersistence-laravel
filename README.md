@@ -9,7 +9,7 @@ To use in Laravel 5.4 add the following line in config/app.php -> providers:
         
 To create models from database use the command:
 
-php artisan hypersistence:make-models <directory?> {--override}
+        php artisan hypersistence:make-models <directory?> {--override}
 
 
 -----------------------------------------
