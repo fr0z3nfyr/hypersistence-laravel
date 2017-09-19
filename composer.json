@@ -23,9 +23,11 @@
     "autoload": {
         "psr-4": { "Hypersistence\\": "." }
     },
-    "scripts": {
-        "post-update-cmd": [
-            "php artisan make:command CreateModelsHypersistence"
-        ]
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Hypersistence\\HypersistenceServiceProvider"
+            ]
+        }
     }
 }
