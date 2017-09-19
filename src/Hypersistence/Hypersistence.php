@@ -1,13 +1,13 @@
 <?php
+
 namespace Hypersistence;
 
-require_once 'Core'.DIRECTORY_SEPARATOR.'Engine.php';
+require_once 'Core' . DIRECTORY_SEPARATOR . 'Engine.php';
 
-class Hypersistence extends \Hypersistence\Core\Engine{
-	
-	public static function autoload($className)
-    {
-        $thisClass = str_replace(__NAMESPACE__.'\\', '', __CLASS__);
+class Hypersistence extends \Hypersistence\Core\Engine {
+
+    public static function autoload($className) {
+        $thisClass = str_replace(__NAMESPACE__ . '\\', '', __CLASS__);
 
         $baseDir = __DIR__;
 
@@ -29,14 +29,13 @@ class Hypersistence extends \Hypersistence\Core\Engine{
             require $fileName;
         }
     }
-	
-	public static function registerAutoloader()
-    {
+
+    public static function registerAutoloader() {
         spl_autoload_register(__NAMESPACE__ . "\\Hypersistence::autoload");
     }
-	
-	public static function &getDBConnection(){
-		return \Hypersistence\Core\DB::getDBConnection();
-	}
-	
+
+    public static function &getDBConnection() {
+        return \Hypersistence\Core\DB::getDBConnection();
+    }
+
 }
