@@ -47,7 +47,7 @@ class CreateModelsHypersistence extends Command {
         $use = "use Hypersistence\Hypersistence";
         $extends = "Hypersistence";
         $dir = !is_null($this->argument('directory')) ? $this->argument('directory') : 'app/Models';
-        $overide = $this->getOption('override');
+        $overide = $this->option('override');
         if (!file_exists($dir)) {
             mkdir($dir);
         }
