@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Console\Commands;
+namespace Hypersistence\Console;
 
 use DB;
 use Illuminate\Console\Command;
