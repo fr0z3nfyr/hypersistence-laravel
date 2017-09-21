@@ -19,7 +19,7 @@ class HypersistenceAuthServiceProvider extends ServiceProvider
 
         Auth::provider('hypersistence', function ($app, array $config) {
             // Return an instance of Illuminate\Contracts\Auth\UserProvider...
-            return new HypersistenceUserProvider($app, $config['model']);
+            return new HypersistenceUserProvider($app['hash'], $config['model']);
         });
     }
 }
