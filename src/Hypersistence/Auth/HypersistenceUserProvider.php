@@ -137,7 +137,12 @@ class HypersistenceUserProvider implements UserProvider
     {
         $class = '\\'.ltrim($this->model, '\\');
 
-        return new $class;
+        $newClass = "class UserAux extends $class implements Illuminate\Contracts\Auth\Authenticatable {";
+        $newClass .= "use \Hypersistence\Auth\HypersistenceAuthenticatable;";
+        $newClass .= "} \$aux = new UserAux();";
+        eval($newClass);
+
+        return $aux;
     }
 
     /**
