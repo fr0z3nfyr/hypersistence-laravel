@@ -757,10 +757,18 @@ class Engine {
         $p = new $className();
         $p->fill($data);
         if (!$p->save()) {
-            dd($p);
             throw new \Exception("Database Error!", 1);
         }
         return $p;
+    }
+
+    public function getTableName() {
+        $refClass = new \ReflectionClass($this);
+        $tableName = self::getAnnotationValue($refClass, self::$TAG_TABLE);
+        if(isset($tableName)){
+            return $tableName;
+        }
+        return null;
     }
 
     public function getPrimaryKeyField() {

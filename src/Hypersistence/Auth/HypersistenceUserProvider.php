@@ -17,7 +17,7 @@ class HypersistenceUserProvider implements UserProvider
     protected $hasher;
 
     /**
-     * The Eloquent user model.
+     * The Hypersistence user model.
      *
      * @var string
      */
@@ -45,6 +45,9 @@ class HypersistenceUserProvider implements UserProvider
     public function retrieveById($identifier)
     {
         $model = $this->createModel();
+        if(is_null($model)) {
+            return null;
+        }
 
         $setId = 'set'.$model->getAuthIdentifierName();
         $model->$setId($identifier);
@@ -62,6 +65,9 @@ class HypersistenceUserProvider implements UserProvider
     public function retrieveByToken($identifier, $token)
     {
         $model = $this->createModel();
+        if(is_null($model)) {
+            return null;
+        }
         $setId = 'set'.$model->getAuthIdentifierName();
         $setToken = 'set'.$model->getRememberTokenName();
         $model->$setId($identifier);
@@ -83,6 +89,9 @@ class HypersistenceUserProvider implements UserProvider
     public function updateRememberToken(UserContract $user, $token)
     {
         $model = $this->createModel();
+        if(is_null($model)) {
+            return null;
+        }
         $setToken = 'set'.$model->getRememberTokenName();
 
         $user->$setToken($token);
@@ -103,8 +112,11 @@ class HypersistenceUserProvider implements UserProvider
 
         // First we will add each credential element to the query as a where clause.
         // Then we can execute the query and, if we found a user, return it in a
-        // Eloquent User "model" that will be utilized by the Guard instances.
+        // Hypersistence User "model" that will be utilized by the Guard instances.
         $model = $this->createModel();
+        if(is_null($model)) {
+            return null;
+        }
         foreach ($credentials as $key => $value) {
             if (! Str::contains($key, $model->getPasswordField())) {
                 $set = 'set'.$key;
@@ -136,7 +148,7 @@ class HypersistenceUserProvider implements UserProvider
     /**
      * Create a new instance of the model.
      *
-     * @return \Illuminate\Database\Eloquent\Model
+     * @return \Illuminate\Contracts\Auth\Authenticatable|null
      */
     public function createModel()
     {
@@ -147,10 +159,14 @@ class HypersistenceUserProvider implements UserProvider
             return $classe;
         }
         $pk = $classe->getPrimaryKeyField();
+        $tableName = $classe->getTableName();
+        if(is_null($tableName)) {
+           return null;
+        }
         if(!class_exists('UserAux')) {
             $newClass = "
             /**
-            * @table(usuario)
+            * @table($tableName)
             * @joinColumn($pk)
             */
             class UserAux extends $class implements
@@ -195,7 +211,7 @@ class HypersistenceUserProvider implements UserProvider
     }
 
     /**
-     * Gets the name of the Eloquent user model.
+     * Gets the name of the Hypersistence user model.
      *
      * @return string
      */
@@ -205,7 +221,7 @@ class HypersistenceUserProvider implements UserProvider
     }
 
     /**
-     * Sets the name of the Eloquent user model.
+     * Sets the name of the Hypersistence user model.
      *
      * @param  string  $model
      * @return $this
