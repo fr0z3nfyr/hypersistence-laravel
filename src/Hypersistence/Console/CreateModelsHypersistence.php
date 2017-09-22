@@ -149,7 +149,6 @@ class CreateModelsHypersistence extends Command {
                             $tables[$tableName]['isManyToMany'] = true;
                         } else {
                             if(isset($tables[$tableName]['fields'][$colNameAux]['key']) && $tables[$tableName]['fields'][$colName]['key'] == 'PRI'){
-                                echo "\n\n\ $tableName $colNameAux é pri";
                                 $colNameAux = $this->camelCase($referenceTable, false);
                                 $tables[$tableName]['fields'][$colNameAux]['field'] = $colNameAux;
                             } 
