@@ -20,7 +20,8 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Hypersistence\\HypersistenceServiceProvider"
+                "Hypersistence\\HypersistenceServiceProvider",
+                "Hypersistence\\Auth\\HypersistenceAuthServiceProvider"
             ]
         }
     }
