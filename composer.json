@@ -2,12 +2,6 @@
     "name": "hypersistence/hypersistence-laravel",
     "type": "library",
     "description": "PHP Object Oriented persistence framework to Laravel.",
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/josebatista/hypersistence-laravel"
-        }
-    ],
     "keywords": ["microframework","framework","persistence","laravel"],
     "license": "MIT",
     "authors": [
@@ -26,7 +20,8 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Hypersistence\\HypersistenceServiceProvider"
+                "Hypersistence\\HypersistenceServiceProvider",
+                "Hypersistence\\Auth\\HypersistenceAuthServiceProvider"
             ]
         }
     }
