@@ -5,20 +5,13 @@ namespace Hypersistence\Auth;
 trait HypersistenceAuthenticatable
 {
     /**
-     * The column name of the "remember me" token.
-     *
-     * @var string
-     */
-    protected $rememberTokenName = 'remember_token';
-
-    /**
      * Get the name of the unique identifier for the user.
      *
      * @return string
      */
     public function getAuthIdentifierName()
     {
-        return $this->getKeyName();
+        return $this->getPrimaryKeyField();
     }
 
     /**
@@ -28,7 +21,8 @@ trait HypersistenceAuthenticatable
      */
     public function getAuthIdentifier()
     {
-        return $this->{$this->getAuthIdentifierName()};
+        $getId = 'get' . $this->getAuthIdentifierName(); 
+        return parent::$getId();
     }
 
     /**
@@ -38,7 +32,8 @@ trait HypersistenceAuthenticatable
      */
     public function getAuthPassword()
     {
-        return $this->password;
+        $getPassword = 'get' . $this->getPasswordField();
+        return parent::$getPassword();
     }
 
     /**
@@ -48,9 +43,8 @@ trait HypersistenceAuthenticatable
      */
     public function getRememberToken()
     {
-        if (! empty($this->getRememberTokenName())) {
-            return $this->{$this->getRememberTokenName()};
-        }
+        $getRemember = 'get' . $this->getRememberTokenField();
+        return parent::$getRemember();
     }
 
     /**
@@ -61,9 +55,8 @@ trait HypersistenceAuthenticatable
      */
     public function setRememberToken($value)
     {
-        if (! empty($this->getRememberTokenName())) {
-            $this->{$this->getRememberTokenName()} = $value;
-        }
+        $setRemember = 'set' . $this->getRememberTokenField();
+        parent::$setRemember($value);
     }
 
     /**
@@ -73,6 +66,6 @@ trait HypersistenceAuthenticatable
      */
     public function getRememberTokenName()
     {
-        return $this->rememberTokenName;
+        return $this->getRememberTokenField();
     }
 }

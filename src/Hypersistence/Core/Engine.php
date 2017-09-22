@@ -26,6 +26,9 @@ class Engine {
     private static $TAG_DATETIME = 'dateTime';
     private static $TAG_TO_JSON = 'toJSON';
     private static $TAG_TO_JSON_FIELD = 'toJSONField';
+    private static $TAG_USERNAME_FIELD = 'usernameField';
+    private static $TAG_PASSWORD_FIELD = 'passwordField';
+    private static $TAG_REMEMBER_TOKEN_FIELD = 'rememberTokenField';
 
     /**
      * 
@@ -118,6 +121,10 @@ class Engine {
                                 self::$TAG_TO_JSON => self::is($p, self::$TAG_TO_JSON),
                                 'fieldJSON' => $fieldJson ? $fieldJson : ltrim(strtolower(preg_replace('/[A-Z]([A-Z](?![a-z]))*/', '_$0', $p->name)), '_'),
                                 self::$TAG_TO_JSON_FIELD => self::getAnnotationValue($p, self::$TAG_TO_JSON_FIELD),
+                                self::$TAG_USERNAME_FIELD => self::is($p, self::$TAG_USERNAME_FIELD),
+                                self::$TAG_PASSWORD_FIELD => self::is($p, self::$TAG_PASSWORD_FIELD),
+                                self::$TAG_REMEMBER_TOKEN_FIELD => self::is($p, self::$TAG_REMEMBER_TOKEN_FIELD),
+
                             );
                         }
                     }
@@ -186,6 +193,24 @@ class Engine {
             }
         }
         throw new \Exception('No primary key found in class ' . $auxClass . '! You must specify a primary key (@primaryKey) in the property that represent it.');
+        return null;
+    }
+
+    public static function getAuthFields($className, $field) {
+        $className = ltrim($className, '\\');
+        $auxClass = $className;
+        if ($className) {
+            while ($className != '' && $className != 'Hypersistence') {
+                foreach (self::$map[$className]['properties'] as $p) {
+                    if ($p[$field]) {
+                        return $p['var'];
+                    }
+                }
+                $className = self::$map[$className]['parent'];
+            }
+            return null;
+        }
+        throw new \Exception('No auth field found in class ' . $auxClass . '!');
         return null;
     }
 
@@ -271,7 +296,6 @@ class Engine {
         $sql = 'select ' . implode(',', $fields) . ' from ' . implode(',', $tables) . ' where ' . implode(' and ', $joins);
 
         if ($stmt = DB::getDBConnection()->prepare($sql)) {
-
             if ($stmt->execute($bounds) && $stmt->rowCount() > 0) {
                 $this->loaded = true;
                 $result = $stmt->fetchObject();
@@ -345,9 +369,11 @@ class Engine {
                 }
             }else {
                 $this->sqlErrorInfo[] = $stmt->errorInfo();
+                return false;
             }
         } else {
             $this->sqlErrorInfo[] = DB::getDBConnection()->errorInfo();
+            return false;
         }
         return $this;
     }
@@ -705,14 +731,21 @@ class Engine {
 
     public function fill($data) {
         $r = new \ReflectionClass($this);
-        $properties = $r->getProperties();
-        foreach ($properties as $p) {
-            $name = $p->getName();
-            if (isset($data[$name])) {
-                $setter = 'set' . $p->getName();
-                if ($r->hasMethod($setter)) {
-                    $this->$setter($data[$name]);
+        while ($r != null && $r->name != 'Hypersistence') {
+            $properties = $r->getProperties();
+            foreach ($properties as $p) {
+                $name = $p->getName();
+                if (isset($data[$name])) {
+                    $setter = 'set' . $p->getName();
+                    if ($r->hasMethod($setter)) {
+                        $this->$setter($data[$name]);
+                    }
                 }
+            }
+            if($r->getParentClass() != null) {
+                $r = $r->getParentClass();
+            } else {
+                $r = null;
             }
         }
     }
@@ -724,9 +757,50 @@ class Engine {
         $p = new $className();
         $p->fill($data);
         if (!$p->save()) {
+            dd($p);
             throw new \Exception("Database Error!", 1);
         }
         return $p;
+    }
+
+    public function getPrimaryKeyField() {
+        $refClass = self::init($this);
+        $pk = self::getPk($refClass)['var'];
+
+        if(isset($pk)) {
+            return $pk;
+        }
+        return 'id';
+    }
+
+    public function getUsernameField() {
+        $refClass = self::init($this);
+        $var = self::getAuthFields($refClass, self::$TAG_USERNAME_FIELD);
+
+        if(isset($var)) {
+            return $var;
+        }
+        return 'username';
+    }
+
+    public function getPasswordField() {
+        $refClass = self::init($this);
+        $var = self::getAuthFields($refClass, self::$TAG_PASSWORD_FIELD);
+
+        if(isset($var)) {
+            return $var;
+        }
+        return 'password';
+    }
+
+    public function getRememberTokenField() {
+        $refClass = self::init($this);
+        $var = self::getAuthFields($refClass, self::$TAG_REMEMBER_TOKEN_FIELD);
+
+        if(isset($var)) {
+            return $var;
+        }
+        return 'rememberToken';
     }
 
 }

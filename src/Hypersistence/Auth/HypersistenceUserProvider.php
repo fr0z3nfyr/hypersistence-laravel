@@ -46,9 +46,10 @@ class HypersistenceUserProvider implements UserProvider
     {
         $model = $this->createModel();
 
-        return $model->newQuery()
-            ->where($model->getAuthIdentifierName(), $identifier)
-            ->first();
+        $setId = 'set'.$model->getAuthIdentifierName();
+        $model->$setId($identifier);
+        $ret = $model->load();
+        return $ret == false ? null : $ret ;
     }
 
     /**
@@ -61,11 +62,15 @@ class HypersistenceUserProvider implements UserProvider
     public function retrieveByToken($identifier, $token)
     {
         $model = $this->createModel();
-
-        return $model->newQuery()
-            ->where($model->getAuthIdentifierName(), $identifier)
-            ->where($model->getRememberTokenName(), $token)
-            ->first();
+        $setId = 'set'.$model->getAuthIdentifierName();
+        $setToken = 'set'.$model->getRememberTokenName();
+        $model->$setId($identifier);
+        $model->setToken($token);
+        $list = $model->search()->execute();
+        if(count($list) > 0){
+            return $list[0];
+        }
+        return null;
     }
 
     /**
@@ -77,15 +82,11 @@ class HypersistenceUserProvider implements UserProvider
      */
     public function updateRememberToken(UserContract $user, $token)
     {
-        $user->setRememberToken($token);
+        $model = $this->createModel();
+        $setToken = 'set'.$model->getRememberTokenName();
 
-        $timestamps = $user->timestamps;
-
-        $user->timestamps = false;
-
+        $user->$setToken($token);
         $user->save();
-
-        $user->timestamps = $timestamps;
     }
 
     /**
@@ -97,21 +98,26 @@ class HypersistenceUserProvider implements UserProvider
     public function retrieveByCredentials(array $credentials)
     {
         if (empty($credentials)) {
-            return;
+            return null;
         }
 
         // First we will add each credential element to the query as a where clause.
         // Then we can execute the query and, if we found a user, return it in a
         // Eloquent User "model" that will be utilized by the Guard instances.
-        $query = $this->createModel()->newQuery();
-
+        $model = $this->createModel();
         foreach ($credentials as $key => $value) {
-            if (! Str::contains($key, 'password')) {
-                $query->where($key, $value);
+            if (! Str::contains($key, $model->getPasswordField())) {
+                $set = 'set'.$key;
+                $model->$set($value);
             }
         }
 
-        return $query->first();
+        $list = $model->search()->execute();
+
+        if(count($list) > 0){
+            return $list[0];
+        }
+        return null;
     }
 
     /**
@@ -123,8 +129,7 @@ class HypersistenceUserProvider implements UserProvider
      */
     public function validateCredentials(UserContract $user, array $credentials)
     {
-        $plain = $credentials['password'];
-
+        $plain = $credentials[$user->getPasswordField()];
         return $this->hasher->check($plain, $user->getAuthPassword());
     }
 
@@ -141,19 +146,27 @@ class HypersistenceUserProvider implements UserProvider
         if($classe instanceof \Illuminate\Contracts\Auth\Authenticatable) {
             return $classe;
         }
-        $newClass = "
-        class UserAux extends $class implements
-            Illuminate\Contracts\Auth\Authenticatable,
-            Illuminate\Contracts\Auth\Access\Authorizable,
-            Illuminate\Contracts\Auth\CanResetPassword
-        {
-            use Hypersistence\Auth\HypersistenceAuthenticatable;
-            use Illuminate\Auth\Passwords\CanResetPassword;
-            use Illuminate\Foundation\Auth\Access\Authorizable;
-        }";
-        $newClass .= "\$aux = new UserAux();";
-
-        eval($newClass);
+        $pk = $classe->getPrimaryKeyField();
+        if(!class_exists('UserAux')) {
+            $newClass = "
+            /**
+            * @table(usuario)
+            * @joinColumn($pk)
+            */
+            class UserAux extends $class implements
+                Illuminate\Contracts\Auth\Authenticatable,
+                Illuminate\Contracts\Auth\Access\Authorizable,
+                Illuminate\Contracts\Auth\CanResetPassword
+            {
+                use Hypersistence\Auth\HypersistenceAuthenticatable;
+                use Illuminate\Auth\Passwords\CanResetPassword;
+                use Illuminate\Foundation\Auth\Access\Authorizable;
+            }";
+            $newClass .= "\$aux = new UserAux();";
+            eval($newClass);
+        } else {
+            $aux = new \UserAux();
+        }
 
         return $aux;
     }
