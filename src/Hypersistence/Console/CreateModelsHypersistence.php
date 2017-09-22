@@ -155,6 +155,7 @@ class CreateModelsHypersistence extends Command {
                             } 
                             $tables[$tableName]['fields'][$colNameAux]['relationship'] = "\t* @manyToOne(lazy)\n\t* @itemClass(" . ($namespace != '' ? "$namespace\\" : "") . $this->camelCase($referenceTable) . ")";
                             if ($colName != "id") {
+                                $field = $colName;
                                 if (strtolower(substr($colName, -3)) == "_id") {
                                     $field = str_replace("_id", "", $colName);
                                 } else if (strtolower(substr($colName, -2)) == "id") {
