@@ -12,7 +12,9 @@ class CreateModelsHypersistence extends Command {
      *
      * @var string
      */
-    protected $signature = 'hypersistence:make-models {directory?} {--override}';
+    protected $signature = 'hypersistence:make-models 
+                            {directory? : Create models into specified directory. Default: app/Models}
+                            {--override : Override existing models into directory}';
 
     /**
      * The console command description.
