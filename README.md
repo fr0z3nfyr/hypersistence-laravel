@@ -11,6 +11,10 @@ To use in Laravel 5.4 add the following line in config/app.php -> providers:
 To create models from database use the command:
 
         php artisan hypersistence:make-models <directory?> {--override}
+        
+To create the basic user model for authnetication use this command:
+
+        php artisan hypersistence:make-auth
 
 
 -----------------------------------------
