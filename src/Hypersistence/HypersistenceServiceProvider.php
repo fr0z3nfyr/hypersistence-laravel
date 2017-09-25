@@ -3,6 +3,7 @@
 namespace Hypersistence;
 
 use Hypersistence\Console\CreateModelsHypersistence;
+use Hypersistence\Console\AuthMakeCommand;
 use Illuminate\Support\ServiceProvider;
 
 class HypersistenceServiceProvider extends ServiceProvider {
@@ -16,6 +17,7 @@ class HypersistenceServiceProvider extends ServiceProvider {
 		if ($this->app->runningInConsole()) {
 		    $this->commands([
 		        CreateModelsHypersistence::class,
+		        AuthMakeCommand::class
 		    ]);
 		}
 	}

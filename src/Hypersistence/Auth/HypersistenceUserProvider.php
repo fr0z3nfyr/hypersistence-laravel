@@ -152,39 +152,8 @@ class HypersistenceUserProvider implements UserProvider
      */
     public function createModel()
     {
-         $class = '\\'.ltrim($this->model, '\\');
-        $classe = new $class;
-        
-        if($classe instanceof \Illuminate\Contracts\Auth\Authenticatable) {
-            return $classe;
-        }
-        $pk = $classe->getPrimaryKeyField();
-        $tableName = $classe->getTableName();
-        if(is_null($tableName)) {
-           return null;
-        }
-        if(!class_exists('UserAux')) {
-            $newClass = "
-            /**
-            * @table($tableName)
-            * @joinColumn($pk)
-            */
-            class UserAux extends $class implements
-                Illuminate\Contracts\Auth\Authenticatable,
-                Illuminate\Contracts\Auth\Access\Authorizable,
-                Illuminate\Contracts\Auth\CanResetPassword
-            {
-                use Hypersistence\Auth\HypersistenceAuthenticatable;
-                use Illuminate\Auth\Passwords\CanResetPassword;
-                use Illuminate\Foundation\Auth\Access\Authorizable;
-            }";
-            $newClass .= "\$aux = new UserAux();";
-            eval($newClass);
-        } else {
-            $aux = new \UserAux();
-        }
-
-        return $aux;
+        $class = '\\'.ltrim($this->model, '\\');
+        return new $class;
     }
 
     /**

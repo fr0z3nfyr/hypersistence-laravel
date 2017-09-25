@@ -6,6 +6,7 @@ PHP Object Orented persistence framework.
 To use in Laravel 5.4 add the following line in config/app.php -> providers:
 
         Hypersistence\HypersistenceServiceProvider::class,
+        Hypersistence\Auth\HypersistenceAuthServiceProvider::class,
         
 To create models from database use the command:
 

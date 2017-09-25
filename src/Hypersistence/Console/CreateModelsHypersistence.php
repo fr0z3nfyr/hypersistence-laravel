@@ -51,7 +51,7 @@ class CreateModelsHypersistence extends Command {
         $dir = !is_null($this->argument('directory')) ? $this->argument('directory') : 'app/Models';
         $override = $this->option('override');
         if (!file_exists($dir)) {
-            mkdir($dir);
+            mkdir($dir, 0755, true);
         }
 
         $tmp = explode('/', $dir);
