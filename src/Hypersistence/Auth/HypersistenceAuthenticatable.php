@@ -22,7 +22,7 @@ trait HypersistenceAuthenticatable
     public function getAuthIdentifier()
     {
         $getId = 'get' . $this->getAuthIdentifierName(); 
-        return parent::$getId();
+        return $this->$getId();
     }
 
     /**
@@ -33,7 +33,7 @@ trait HypersistenceAuthenticatable
     public function getAuthPassword()
     {
         $getPassword = 'get' . $this->getPasswordField();
-        return parent::$getPassword();
+        return $this->$getPassword();
     }
 
     /**
@@ -44,7 +44,7 @@ trait HypersistenceAuthenticatable
     public function getRememberToken()
     {
         $getRemember = 'get' . $this->getRememberTokenField();
-        return parent::$getRemember();
+        return $this->$getRemember();
     }
 
     /**
@@ -56,7 +56,7 @@ trait HypersistenceAuthenticatable
     public function setRememberToken($value)
     {
         $setRemember = 'set' . $this->getRememberTokenField();
-        parent::$setRemember($value);
+        $this->$setRemember($value);
     }
 
     /**
