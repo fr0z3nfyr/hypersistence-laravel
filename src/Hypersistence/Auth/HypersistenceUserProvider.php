@@ -95,7 +95,11 @@ class HypersistenceUserProvider implements UserProvider
         $setToken = 'set'.$model->getRememberTokenName();
 
         $user->$setToken($token);
-        $user->save();
+        if($user->save()) {
+            $user->commit();
+        } else {
+            $user->rollback();
+        }
     }
 
     /**
