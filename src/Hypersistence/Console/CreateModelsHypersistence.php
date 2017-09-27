@@ -167,7 +167,7 @@ class CreateModelsHypersistence extends Command {
 
                             if (isset($tables[$referenceTable]['fields'][$referenceCol]['key'])) {
                                 if(isset($tables[$referenceTable]['fields'][$field])) $field.="_$colNameAux";
-                                $tables[$referenceTable]['fields'][$field]['relationship'] = "\t* @OneToMany(lazy)\n\t* @itemClass(" . ($namespace != '' ? "$namespace\\" : "") . $this->camelCase($tableName) . ")\n\t* @joinColumn(" . $colNameAux . ")";
+                                $tables[$referenceTable]['fields'][$field]['relationship'] = "\t* @oneToMany(lazy)\n\t* @itemClass(" . ($namespace != '' ? "$namespace\\" : "") . $this->camelCase($tableName) . ")\n\t* @joinColumn(" . $colNameAux . ")";
                                 $tables[$referenceTable]['fields'][$field]['column'] = false;
                                 $tables[$referenceTable]['fields'][$field]['field'] = $field;
                             }
