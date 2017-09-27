@@ -12,7 +12,9 @@ class CreateModelsHypersistence extends Command {
      *
      * @var string
      */
-    protected $signature = 'hypersistence:make-models {directory?} {--override}';
+    protected $signature = 'hypersistence:make-models 
+                            {directory? : Create models into specified directory. Default: app/Models}
+                            {--override : Override existing models into directory}';
 
     /**
      * The console command description.
@@ -49,7 +51,7 @@ class CreateModelsHypersistence extends Command {
         $dir = !is_null($this->argument('directory')) ? $this->argument('directory') : 'app/Models';
         $override = $this->option('override');
         if (!file_exists($dir)) {
-            mkdir($dir);
+            mkdir($dir, 0755, true);
         }
 
         $tmp = explode('/', $dir);
@@ -127,6 +129,7 @@ class CreateModelsHypersistence extends Command {
                     while ($i = $stmt->fetch()) {
                         $tableName = $i['TABLE_NAME'];
                         $colName = $i['COLUMN_NAME'];
+                        $colNameAux = $i['COLUMN_NAME'];
                         $referenceTable = $i['REFERENCED_TABLE_NAME'];
                         $referenceCol = $i['REFERENCED_COLUMN_NAME'];
                         $isManyToMany = false;
@@ -145,8 +148,13 @@ class CreateModelsHypersistence extends Command {
                             $tables[$referenceTable]['fields'][$infoManyToMany['field']]['column'] = false;
                             $tables[$tableName]['isManyToMany'] = true;
                         } else {
-                            $tables[$tableName]['fields'][$colName]['relationship'] = "\t* @manyToOne(lazy)\n\t* @itemClass(" . ($namespace != '' ? "$namespace\\" : "") . $this->camelCase($referenceTable) . ")";
+                            if(isset($tables[$tableName]['fields'][$colNameAux]['key']) && $tables[$tableName]['fields'][$colName]['key'] == 'PRI'){
+                                $colNameAux = $this->camelCase($referenceTable, false);
+                                $tables[$tableName]['fields'][$colNameAux]['field'] = $colNameAux;
+                            } 
+                            $tables[$tableName]['fields'][$colNameAux]['relationship'] = "\t* @manyToOne(lazy)\n\t* @itemClass(" . ($namespace != '' ? "$namespace\\" : "") . $this->camelCase($referenceTable) . ")";
                             if ($colName != "id") {
+                                $field = $colName;
                                 if (strtolower(substr($colName, -3)) == "_id") {
                                     $field = str_replace("_id", "", $colName);
                                 } else if (strtolower(substr($colName, -2)) == "id") {
@@ -156,10 +164,12 @@ class CreateModelsHypersistence extends Command {
                             }
                             $field = $this->camelCase($tableName, false);
                             $field .= substr($field, -1) != "s" ? "s" : '';
-                            if (isset($tables[$referenceTable]['fields'][$colName]['key']) && $tables[$referenceTable]['fields'][$colName]['key'] != 'PRI') {
-                                $tables[$referenceTable]['fields'][$colName]['relationship'] = "\t* @OneToMany(lazy)\n\t* @itemClass(" . ($namespace != '' ? "$namespace\\" : "") . $this->camelCase($tableName) . ")\n\t* @joinColumn(" . $colName . ")";
-                                $tables[$referenceTable]['fields'][$colName]['column'] = false;
-                                $tables[$referenceTable]['fields'][$colName]['field'] = $field;
+
+                            if (isset($tables[$referenceTable]['fields'][$referenceCol]['key'])) {
+                                if(isset($tables[$referenceTable]['fields'][$field])) $field.="_$colNameAux";
+                                $tables[$referenceTable]['fields'][$field]['relationship'] = "\t* @oneToMany(lazy)\n\t* @itemClass(" . ($namespace != '' ? "$namespace\\" : "") . $this->camelCase($tableName) . ")\n\t* @joinColumn(" . $colNameAux . ")";
+                                $tables[$referenceTable]['fields'][$field]['column'] = false;
+                                $tables[$referenceTable]['fields'][$field]['field'] = $field;
                             }
                         }
                     }
