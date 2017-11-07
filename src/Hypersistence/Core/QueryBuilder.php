@@ -150,6 +150,8 @@ class QueryBuilder {
         else
             $orderBy = '';
 
+        $fields = array_merge($fields, $this->orderBy);
+        $str_fields = str_replace(' desc', '', str_replace(' asc', '', implode(',', $fields)));
         $sql = 'select distinct ' . implode(',', $fields) . ' from ' . implode(',', $tables) . ' ' . implode(' ', $this->joins) . $where . $orderBy . ' LIMIT :limit OFFSET :offset';
         if ($stmt = DB::getDBConnection()->prepare($sql)) {
 
