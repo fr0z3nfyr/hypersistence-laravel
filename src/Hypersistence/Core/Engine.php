@@ -729,25 +729,79 @@ class Engine {
         return json_decode(json_encode($json));
     }
 
-    public function fill($data) {
-        $r = new \ReflectionClass($this);
-        while ($r != null && $r->name != 'Hypersistence') {
-            $properties = $r->getProperties();
+            public function fill($data) {
+
+        $class = ltrim(self::init($this), '\\');
+
+        while ($class != null && $class !== 'Hypersistence') {
+            $properties = self::$map[$class]['properties'];
             foreach ($properties as $p) {
-                $name = $p->getName();
-                if (isset($data[$name])) {
-                    $setter = 'set' . $p->getName();
-                    if ($r->hasMethod($setter)) {
-                        $this->$setter($data[$name]);
+                $name = $p['var'];
+                $setter = 'set' . $name;
+
+                if (array_key_exists($name, $data)) {
+                    if ($data[$name] !== NULL) {
+                        if ($p['relType'] == self::MANY_TO_ONE) {
+                            $objClass = $p[self::$TAG_ITEM_CLASS];
+                            self::init($objClass);
+                            $objPk = self::getPk($objClass);
+                            $objSet = 'set' . $objPk['var'];
+                            $obj = new $objClass();
+                            $obj->$objSet($data[$name]);
+                            $this->$setter($obj);
+                        } else {
+                            $this->$setter($data[$name]);
+                        }
+                    }
+                } else {
+                    $key = preg_grep('/^' . $name . '_/', array_keys($data));
+                    if (count($key) > 0 && $p['relType'] == self::MANY_TO_ONE) {
+                        $key = array_shift($key);
+                        $vars = explode("_", $key);
+                        if (count($vars) > 1) {
+                            $var = array_shift($vars);
+                            if ($var == $name) {
+                                $setter = 'set' . $name;
+                                $objClass = $p[self::$TAG_ITEM_CLASS];
+                                $this->$setter($this->setRecursiveValuesToFill($objClass, $vars, $data[$key]));
+                            }
+                        }
                     }
                 }
             }
-            if($r->getParentClass() != null) {
-                $r = $r->getParentClass();
+            if (self::$map[$class]['parent'] != null) {
+                $class = self::$map[$class]['parent'];
             } else {
-                $r = null;
+                $class = null;
             }
         }
+    }
+
+    private function setRecursiveValuesToFill($objClass, $vars, $value) {
+        if($value == NULL){
+            return NULL;
+        }
+        self::init($objClass);
+        $obj = new $objClass();
+        $var = array_shift($vars);
+        $setter = 'set' . $var;
+        while ($objClass != null && $objClass !== 'Hypersistence') {
+        $p = isset(self::$map[ltrim($objClass, '\\')]['properties'][$var]) ? self::$map[ltrim($objClass, '\\')]['properties'][$var] : array();
+            if (count($p) > 0) {
+                if ($p['relType'] == self::MANY_TO_ONE) {
+                    return $this->setRecursiveValuesToFill($p[self::$TAG_ITEM_CLASS], $vars, $value);
+                } else {
+                    $obj->$setter($value);
+                    return $obj;
+                }
+            } 
+            if (self::$map[ltrim($objClass, '\\')]['parent'] != null) {
+                $objClass = self::$map[ltrim($objClass, '\\')]['parent'];
+            } else {
+                $objClass = null;
+            }
+        } 
+        return null;
     }
 
     public static function create($data) {
