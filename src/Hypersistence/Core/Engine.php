@@ -124,7 +124,6 @@ class Engine {
                                 self::$TAG_USERNAME_FIELD => self::is($p, self::$TAG_USERNAME_FIELD),
                                 self::$TAG_PASSWORD_FIELD => self::is($p, self::$TAG_PASSWORD_FIELD),
                                 self::$TAG_REMEMBER_TOKEN_FIELD => self::is($p, self::$TAG_REMEMBER_TOKEN_FIELD),
-
                             );
                         }
                     }
@@ -342,13 +341,13 @@ class Engine {
                             if ($p['relType'] == self::ONE_TO_MANY) {
                                 $objClass = ltrim($p[self::$TAG_ITEM_CLASS], '\\');
                                 self::init($objClass);
-
                                 $objFk = self::getPropertyByColumn($objClass, $p[self::$TAG_JOIN_COLUMN]);
                                 if ($objFk) {
                                     $obj = new $objClass;
                                     $objSet = 'set' . $objFk['var'];
                                     $obj->$objSet($this);
                                     $search = $obj->search();
+
                                     if ($p['loadType'] == 'eager') {
                                         $search = $search->execute();
                                     }
@@ -571,7 +570,6 @@ class Engine {
                     $sql = 'insert into `' . self::$map[$class][self::$TAG_TABLE] . '` (' . implode(',', $fields) . ') values (' . implode(',', $values) . ')';
                 }
             }
-
             if ($sql != '') {
                 if ($stmt = DB::getDBConnection()->prepare($sql)) {
                     if ($stmt->execute($bounds)) {
@@ -706,11 +704,15 @@ class Engine {
                     if ($p['relType'] == self::MANY_TO_ONE) {
                         if (isset($p[self::$TAG_TO_JSON_FIELD]) && $p[self::$TAG_TO_JSON_FIELD] != '') {
                             $getJsonField = 'get' . $p[self::$TAG_TO_JSON_FIELD];
-                            $result = $this->$get()->load()->$getJsonField();
-                            if ($result && $result instanceof \Hypersistence\Hypersistence) {
-                                $json[$field] = $result->toJSON();
+                            if ($this->$get() != NULL) {
+                                $result = $this->$get()->load()->$getJsonField();
+                                if ($result && $result instanceof \Hypersistence\Hypersistence) {
+                                    $json[$field] = $result->toJSON();
+                                } else {
+                                    $json[$field] = $result;
+                                }
                             } else {
-                                $json[$field] = $result;
+                                $json[$field] = NULL;
                             }
                         } else {
                             $obj = $this->$get();
@@ -729,7 +731,7 @@ class Engine {
         return json_decode(json_encode($json));
     }
 
-            public function fill($data) {
+    public function fill($data) {
 
         $class = ltrim(self::init($this), '\\');
 
@@ -743,12 +745,16 @@ class Engine {
                     if ($data[$name] !== NULL) {
                         if ($p['relType'] == self::MANY_TO_ONE) {
                             $objClass = $p[self::$TAG_ITEM_CLASS];
-                            self::init($objClass);
-                            $objPk = self::getPk($objClass);
-                            $objSet = 'set' . $objPk['var'];
-                            $obj = new $objClass();
-                            $obj->$objSet($data[$name]);
-                            $this->$setter($obj);
+                            if (is_a($data[$name], $objClass)) {
+                                $this->$setter($data[$name]);
+                            } else {
+                                self::init($objClass);
+                                $objPk = self::getPk($objClass);
+                                $objSet = 'set' . $objPk['var'];
+                                $obj = new $objClass();
+                                $obj->$objSet($data[$name]);
+                                $this->$setter($obj);
+                            }
                         } else {
                             $this->$setter($data[$name]);
                         }
@@ -756,14 +762,17 @@ class Engine {
                 } else {
                     $key = preg_grep('/^' . $name . '_/', array_keys($data));
                     if (count($key) > 0 && $p['relType'] == self::MANY_TO_ONE) {
-                        $key = array_shift($key);
-                        $vars = explode("_", $key);
-                        if (count($vars) > 1) {
-                            $var = array_shift($vars);
-                            if ($var == $name) {
-                                $setter = 'set' . $name;
-                                $objClass = $p[self::$TAG_ITEM_CLASS];
-                                $this->$setter($this->setRecursiveValuesToFill($objClass, $vars, $data[$key]));
+//                        $key = array_shift($key);
+                        foreach ($key as $k) {
+                            $vars = explode("_", $k);
+                            if (count($vars) > 1) {
+                                $var = array_shift($vars);
+                                if ($var == $name) {
+                                    $setter = 'set' . $name;
+                                    $getter = 'get' . $name;
+                                    $objClass = $p[self::$TAG_ITEM_CLASS];
+                                    $this->$setter($this->setRecursiveValuesToFill($objClass, $vars, $data[$k], $this->$getter()));
+                                }
                             }
                         }
                     }
@@ -777,30 +786,30 @@ class Engine {
         }
     }
 
-    private function setRecursiveValuesToFill($objClass, $vars, $value) {
-        if($value == NULL){
-            return NULL;
-        }
+    private function setRecursiveValuesToFill($objClass, $vars, $value, $obj = null) {
+
         self::init($objClass);
-        $obj = new $objClass();
+        $obj = $obj != NULL ? $obj : new $objClass();
         $var = array_shift($vars);
         $setter = 'set' . $var;
+        $getter = 'get' . $var;
         while ($objClass != null && $objClass !== 'Hypersistence') {
-        $p = isset(self::$map[ltrim($objClass, '\\')]['properties'][$var]) ? self::$map[ltrim($objClass, '\\')]['properties'][$var] : array();
+            $p = isset(self::$map[ltrim($objClass, '\\')]['properties'][$var]) ? self::$map[ltrim($objClass, '\\')]['properties'][$var] : array();
             if (count($p) > 0) {
                 if ($p['relType'] == self::MANY_TO_ONE) {
-                    return $this->setRecursiveValuesToFill($p[self::$TAG_ITEM_CLASS], $vars, $value);
+                    $obj->$setter($this->setRecursiveValuesToFill($p[self::$TAG_ITEM_CLASS], $vars, $value, $obj->$getter()));
+                    return $obj;
                 } else {
                     $obj->$setter($value);
                     return $obj;
                 }
-            } 
+            }
             if (self::$map[ltrim($objClass, '\\')]['parent'] != null) {
                 $objClass = self::$map[ltrim($objClass, '\\')]['parent'];
             } else {
                 $objClass = null;
             }
-        } 
+        }
         return null;
     }
 
@@ -819,7 +828,7 @@ class Engine {
     public function getTableName() {
         $refClass = new \ReflectionClass($this);
         $tableName = self::getAnnotationValue($refClass, self::$TAG_TABLE);
-        if(isset($tableName)){
+        if (isset($tableName)) {
             return $tableName;
         }
         return null;
@@ -829,7 +838,7 @@ class Engine {
         $refClass = self::init($this);
         $pk = self::getPk($refClass)['var'];
 
-        if(isset($pk)) {
+        if (isset($pk)) {
             return $pk;
         }
         return 'id';
@@ -839,7 +848,7 @@ class Engine {
         $refClass = self::init($this);
         $var = self::getAuthFields($refClass, self::$TAG_USERNAME_FIELD);
 
-        if(isset($var)) {
+        if (isset($var)) {
             return $var;
         }
         return 'username';
@@ -849,7 +858,7 @@ class Engine {
         $refClass = self::init($this);
         $var = self::getAuthFields($refClass, self::$TAG_PASSWORD_FIELD);
 
-        if(isset($var)) {
+        if (isset($var)) {
             return $var;
         }
         return 'password';
@@ -859,7 +868,7 @@ class Engine {
         $refClass = self::init($this);
         $var = self::getAuthFields($refClass, self::$TAG_REMEMBER_TOKEN_FIELD);
 
-        if(isset($var)) {
+        if (isset($var)) {
             return $var;
         }
         return 'rememberToken';
