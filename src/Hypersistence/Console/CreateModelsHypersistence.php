@@ -136,13 +136,13 @@ class CreateModelsHypersistence extends Command {
                         if (count($tables[$tableName]['fields']) == 2) {
                             $isManyToMany = true;
                             foreach ($tables[$tableName]['fields'] as $field => $attrs) {
-                                if ($attrs['key'] !== 'PRI') {
+                                if ($attrs['key'] !== 'PRI' && $attrs['key'] != 'MUL') {
                                     $isManyToMany = false;
                                 }
                             }
                         }
                         if ($isManyToMany) {
-                            $infoManyToMany = $this->getManyToManyAnotation($tableName, $referenceTable, $referenceCol, $db, env("DB_DATABASE", "laravel_db"), $namespace);
+                            $infoManyToMany = $this->getManyToManyAnotation($tableName, $referenceTable, $colName, $db, env("DB_DATABASE", "laravel_db"), $namespace);
                             $tables[$referenceTable]['fields'][$infoManyToMany['field']]['relationship'] = $infoManyToMany['anotation'];
                             $tables[$referenceTable]['fields'][$infoManyToMany['field']]['field'] = $infoManyToMany['field'];
                             $tables[$referenceTable]['fields'][$infoManyToMany['field']]['column'] = false;
@@ -257,7 +257,7 @@ class CreateModelsHypersistence extends Command {
                     $field = $this->camelCase($otherTable, false);
                     $field .= substr($field, -1) != "s" ? "s" : '';
 
-                    return ["anotation" => "\t* @manyToMany(lazy)\n\t* @joinColumn(" . $refereceCol . ")\n\t* @inverseJoinColumn(" . $otherCol . ")\n\t* @itemClass(" . ($namespace != '' ? "$namespace\\" : "") . $this->camelCase($otherTable) . ")\n\t* @joinTable(" . $tableName . ")", "field" => $field];
+                    return ["anotation" => "\t* @manyToMany(lazy)\n\t* @joinColumn(" . $refereceCol . ")\n\t* @inverseJoinColumn(" . $colName . ")\n\t* @itemClass(" . ($namespace != '' ? "$namespace\\" : "") . $this->camelCase($otherTable) . ")\n\t* @joinTable(" . $tableName . ")", "field" => $field];
                 }
             }
         }

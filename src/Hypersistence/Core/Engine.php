@@ -29,6 +29,7 @@ class Engine {
     private static $TAG_USERNAME_FIELD = 'usernameField';
     private static $TAG_PASSWORD_FIELD = 'passwordField';
     private static $TAG_REMEMBER_TOKEN_FIELD = 'rememberTokenField';
+    private static $TAG_FILLABLE = 'fillable';
 
     /**
      * 
@@ -124,6 +125,7 @@ class Engine {
                                 self::$TAG_USERNAME_FIELD => self::is($p, self::$TAG_USERNAME_FIELD),
                                 self::$TAG_PASSWORD_FIELD => self::is($p, self::$TAG_PASSWORD_FIELD),
                                 self::$TAG_REMEMBER_TOKEN_FIELD => self::is($p, self::$TAG_REMEMBER_TOKEN_FIELD),
+                                self::$TAG_FILLABLE => self::is($p, self::$TAG_FILLABLE),
                             );
                         }
                     }
@@ -479,7 +481,6 @@ class Engine {
      * @return boolean
      */
     public function save() {
-
         $classThis = self::init($this);
 
         $classes = array();
@@ -571,7 +572,9 @@ class Engine {
                 }
             }
             if ($sql != '') {
+
                 if ($stmt = DB::getDBConnection()->prepare($sql)) {
+
                     if ($stmt->execute($bounds)) {
                         if ($new) {
                             $lastId = DB::getDBConnection()->lastInsertId();
@@ -592,6 +595,7 @@ class Engine {
                 }
             }
         }
+
         return true;
     }
 
@@ -654,11 +658,11 @@ class Engine {
                                 }
                             }
                         } else {
-                            throw new Exception('You must pass an instance of ' . $class . ' to ' . $name . '!');
+                            throw new \Exception('You must pass an instance of ' . $class . ' to ' . $name . '!');
                         }
                     }
                 } else {
-                    throw new Exception('Property ' . $varName . ' not found!');
+                    throw new \Exception('Property ' . $varName . ' not found!');
                 }
             }
         }
@@ -728,19 +732,20 @@ class Engine {
             $class = self::$map[$class]['parent'];
             $i++;
         }
-        return json_decode(json_encode($json));
+        return (object) $json;
     }
 
     public function fill($data) {
 
         $class = ltrim(self::init($this), '\\');
-
         while ($class != null && $class !== 'Hypersistence') {
             $properties = self::$map[$class]['properties'];
             foreach ($properties as $p) {
                 $name = $p['var'];
                 $setter = 'set' . $name;
-
+                if (!$p[self::$TAG_FILLABLE]) {
+                    continue;
+                }
                 if (array_key_exists($name, $data)) {
                     if ($data[$name] !== NULL) {
                         if ($p['relType'] == self::MANY_TO_ONE) {
@@ -800,6 +805,9 @@ class Engine {
                     $obj->$setter($this->setRecursiveValuesToFill($p[self::$TAG_ITEM_CLASS], $vars, $value, $obj->$getter()));
                     return $obj;
                 } else {
+                    if (!$p[self::$TAG_FILLABLE]) {
+                        return NULL;
+                    }
                     $obj->$setter($value);
                     return $obj;
                 }

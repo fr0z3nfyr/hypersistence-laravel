@@ -238,7 +238,6 @@ class QueryBuilder {
                 }
             }
         }
-
         return $this->resultList;
     }
 
@@ -249,10 +248,11 @@ class QueryBuilder {
         $this->rows = 0;
         $this->offset = 0;
         $this->page = 0;
-        if ($this->execute())
+        if ($this->execute()) {
             return $this->resultList;
-        else
+        } else {
             return array();
+        }
     }
 
     /**
