@@ -735,7 +735,7 @@ class Engine {
         return (object) $json;
     }
 
-    public function fill($data) {
+    public function fill($data, $checkFillable = true) {
 
         $class = ltrim(self::init($this), '\\');
         while ($class != null && $class !== 'Hypersistence') {
@@ -743,7 +743,7 @@ class Engine {
             foreach ($properties as $p) {
                 $name = $p['var'];
                 $setter = 'set' . $name;
-                if (!$p[self::$TAG_FILLABLE]) {
+                if (!$p[self::$TAG_FILLABLE] && $checkFillable) {
                     continue;
                 }
                 if (array_key_exists($name, $data)) {
@@ -776,7 +776,7 @@ class Engine {
                                     $setter = 'set' . $name;
                                     $getter = 'get' . $name;
                                     $objClass = $p[self::$TAG_ITEM_CLASS];
-                                    $this->$setter($this->setRecursiveValuesToFill($objClass, $vars, $data[$k], $this->$getter()));
+                                    $this->$setter($this->setRecursiveValuesToFill($objClass, $vars, $data[$k], $this->$getter(), $checkFillable));
                                 }
                             }
                         }
@@ -791,7 +791,7 @@ class Engine {
         }
     }
 
-    private function setRecursiveValuesToFill($objClass, $vars, $value, $obj = null) {
+    private function setRecursiveValuesToFill($objClass, $vars, $value, $obj = null, $checkFillable) {
 
         self::init($objClass);
         $obj = $obj != NULL ? $obj : new $objClass();
@@ -805,7 +805,7 @@ class Engine {
                     $obj->$setter($this->setRecursiveValuesToFill($p[self::$TAG_ITEM_CLASS], $vars, $value, $obj->$getter()));
                     return $obj;
                 } else {
-                    if (!$p[self::$TAG_FILLABLE]) {
+                    if (!$p[self::$TAG_FILLABLE] && $checkFillable) {
                         return NULL;
                     }
                     $obj->$setter($value);
@@ -826,8 +826,9 @@ class Engine {
 
         $className = $r->getName();
         $p = new $className();
-        $p->fill($data);
+        $p->fill($data, false);
         if (!$p->save()) {
+            dd($p->sqlErrorInfo());
             throw new \Exception("Database Error!", 1);
         }
         return $p;
