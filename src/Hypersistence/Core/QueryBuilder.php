@@ -122,13 +122,15 @@ class QueryBuilder {
         }
         $sql = 'select count(' . $count . ') as total from ' . implode(',', $tables) . ' ' . implode(' ', $this->joins) . $where;
 
+//        echo "$sql<BR>";
+//        var_dump($this->bounds);
         $bounds = array();
+
         foreach ($this->bounds as $key => $val) {
             if ($key != ':offset' && $key != ':limit') {
                 $bounds[$key] = $val;
             }
         }
-
         if ($stmt = DB::getDBConnection()->prepare($sql)) {
             if ($stmt->execute($bounds) && $stmt->rowCount() > 0) {
                 $result = $stmt->fetchObject();
@@ -136,6 +138,7 @@ class QueryBuilder {
                 $this->totalPages = $this->rows > 0 ? ceil($this->totalRows / $this->rows) : 1;
             } else {
                 return array();
+                dd($stmt);
             }
         }
 
@@ -301,30 +304,37 @@ class QueryBuilder {
         $className = ltrim($className, '\\');
         $p = Engine::getPropertyByVarName($className, $var);
         if ($p['relType'] == Engine::MANY_TO_ONE) {
+            $i = 0;
+            $key = ':' . $this->chars[$p['i']] . '_' . $p['column'];
+            while (isset($this->bounds[$key . $i]))
+                $i++;
             if ((strtolower($opperation) == 'is' || strtolower($opperation) == 'is not') && (strtolower($value) == 'null' || is_null($value))) {
-                $i = 0;
-                $key = ':' . $this->chars[$p['i']] . '_' . $p['column'];
-                while (isset($this->bounds[$key . $i]))
-                    $i++;
                 $filter = $this->chars[$p['i']] . '.' . $p['column'] . ' ' . $opperation . ' null';
                 $this->filters[md5($filter)] = $filter;
                 return $this;
             } else if (is_array($value)) {
-                $operation = 'in';
+                $opperation = 'in';
                 $inCondition = '';
                 $separator = '';
+                $keys = '';
+
                 foreach ($value as $v) {
                     if (!is_object($v) && !is_array($v) && !is_null($v)) {
-                        $inCondition .= $separator . " '$v'";
+                        $keys .= $separator . $key . $i;
+                        $this->bounds[$key . $i] = $v;
+                        $i++;
+                        ;
                     } else if (is_object($v) && $v instanceof \Hypersistence\Hypersistence) {
                         $pk = $v->getPk();
                         $get = 'get' . $pk['var'];
                         $val = $v->$get();
-                        $inCondition .= $separator . " '$val'";
+                        $keys .= $separator . $key . $i;
+                        $this->bounds[$key . $i] = $val;
+                        $i++;
                     }
                     $separator = ",";
                 }
-                $value = "(" . trim($inCondition) . ")";
+                $value = "(" . trim($keys) . ")";
             }
             $this->joinPersonalFilter($className, $p, $parts, $opperation, $value, $this->chars[$p['i']]);
         } else {
@@ -337,18 +347,25 @@ class QueryBuilder {
                 $this->filters[md5($filter)] = $filter;
                 return $this;
             } else if (is_array($value)) {
-                $operation = 'in';
+                $opperation = 'in';
                 $inCondition = '';
                 $separator = '';
-                $i = 0;
                 $keys = '';
                 foreach ($value as $v) {
                     if (!is_object($v) && !is_array($v) && !is_null($v)) {
                         $keys .= $separator . $key . $i;
-                        $separator = ",";
                         $this->bounds[$key . $i] = $v;
                         $i++;
+                        ;
+                    } else if (is_object($v) && $v instanceof \Hypersistence\Hypersistence) {
+                        $pk = $v->getPk();
+                        $get = 'get' . $pk['var'];
+                        $val = $v->$get();
+                        $keys .= $separator . $key . $i;
+                        $this->bounds[$key . $i] = $val;
+                        $i++;
                     }
+                    $separator = ",";
                 }
                 $filter = $this->chars[$p['i']] . '.' . $p['column'] . ' in (' . $keys . ')';
                 $this->filters[md5($filter)] = $filter;
@@ -422,13 +439,18 @@ class QueryBuilder {
                     if ($p['relType'] == Engine::MANY_TO_ONE) {
                         $this->joinPersonalFilter($auxClass, $p, $parts, $classAlias, $alias);
                     } else {
-                        $i = 0;
-                        $key = ':' . $alias . $char . '_' . $p['column'];
-                        while (isset($this->bounds[$key . $i]))
-                            $i++;
-                        $filter = $alias . $char . '.' . $p['column'] . ' ' . $opperation . ' ' . $key . $i;
-                        $this->filters[md5($filter)] = $filter;
-                        $this->bounds[$key . $i] = $value;
+                        if ("in" == strtolower($opperation)) {
+                            $filter = $alias . $char . '.' . $p['column'] . ' in ' . $value;
+                            $this->filters[md5($filter)] = $filter;
+                        } else {
+                            $i = 0;
+                            $key = ':' . $alias . $char . '_' . $p['column'];
+                            while (isset($this->bounds[$key . $i]))
+                                $i++;
+                            $filter = $alias . $char . '.' . $p['column'] . ' ' . $opperation . ' ' . $key . $i;
+                            $this->filters[md5($filter)] = $filter;
+                            $this->bounds[$key . $i] = $value;
+                        }
                     }
                     break 2;
                 }
