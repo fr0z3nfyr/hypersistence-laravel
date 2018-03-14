@@ -21,12 +21,16 @@ class DB extends \PDO {
         if (!is_null(self::$conn) && self::$conn instanceof DB) {
             return self::$conn;
         } else {
-            self::$conn = new DB(env("DB_CONNECTION", "mysql") . ":"
-                    . "host=" . env("DB_HOST", "localhost") . ";"
-                    . "dbname=" . env("DB_DATABASE", "laravel_db") . ";"
-                    . "charset=" . env("DB_CHARSET", "utf8mb4"),
-                    env("DB_USERNAME", "root"),
-                    env("DB_PASSWORD", "root"), array(
+            $driver = config("database.default");
+            $host = config("database.connections.$driver.host");
+            $database = config("database.connections.$driver.database");
+            $username = config("database.connections.$driver.username");
+            $password = config("database.connections.$driver.password");
+            $charset = config("database.connections.$driver.charset");
+            self::$conn = new DB($driver . ":"
+                    . "host=" . $host . ";"
+                    . "dbname=" . $database . ";"
+                    . "charset=" . $charset, $username, $password, array(
                 self::ATTR_PERSISTENT => true,
                 self::ATTR_STATEMENT_CLASS => array('\Hypersistence\Core\Statement'),
                 self::ATTR_PERSISTENT => false)
