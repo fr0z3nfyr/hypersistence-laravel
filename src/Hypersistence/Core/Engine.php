@@ -802,7 +802,7 @@ class Engine {
             $p = isset(self::$map[ltrim($objClass, '\\')]['properties'][$var]) ? self::$map[ltrim($objClass, '\\')]['properties'][$var] : array();
             if (count($p) > 0) {
                 if ($p['relType'] == self::MANY_TO_ONE) {
-                    $obj->$setter($this->setRecursiveValuesToFill($p[self::$TAG_ITEM_CLASS], $vars, $value, $obj->$getter()));
+                    $obj->$setter($this->setRecursiveValuesToFill($p[self::$TAG_ITEM_CLASS], $vars, $value, $obj->$getter(), $checkFillable));
                     return $obj;
                 } else {
                     if (!$p[self::$TAG_FILLABLE] && $checkFillable) {
