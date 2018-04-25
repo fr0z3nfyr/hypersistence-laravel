@@ -296,7 +296,7 @@ class QueryBuilder {
         $className = Engine::init($this->object);
 
         $property = preg_replace('/[ \t]/', '', $property);
-        $opperation = preg_replace('/[^!=><isISlkeLKEnotNOT ]/', '', $opperation);
+        $opperation = preg_replace('/[^!=><isISlkeLKEnotNOTinIN ]/', '', $opperation);
         $parts = explode('.', $property);
 
         $var = $parts[0];
@@ -313,7 +313,7 @@ class QueryBuilder {
                 $this->filters[md5($filter)] = $filter;
                 return $this;
             } else if (is_array($value)) {
-                $opperation = 'in';
+                $opperation = str_contains(strtolower($opperation), 'in') ? $opperation : 'in';
                 $inCondition = '';
                 $separator = '';
                 $keys = '';
@@ -347,7 +347,7 @@ class QueryBuilder {
                 $this->filters[md5($filter)] = $filter;
                 return $this;
             } else if (is_array($value)) {
-                $opperation = 'in';
+                $opperation = str_contains(strtolower($opperation), 'in') ? $opperation : 'in';
                 $inCondition = '';
                 $separator = '';
                 $keys = '';
@@ -367,7 +367,7 @@ class QueryBuilder {
                     }
                     $separator = ",";
                 }
-                $filter = $this->chars[$p['i']] . '.' . $p['column'] . ' in (' . $keys . ')';
+                $filter = $this->chars[$p['i']] . '.' . $p['column'] . " $opperation (" . $keys . ')';
                 $this->filters[md5($filter)] = $filter;
             } else {
                 $filter = $this->chars[$p['i']] . '.' . $p['column'] . ' ' . $opperation . ' ' . $key . $i;
@@ -440,7 +440,7 @@ class QueryBuilder {
                         $this->joinPersonalFilter($auxClass, $p, $parts, $classAlias, $alias);
                     } else {
                         if ("in" == strtolower($opperation)) {
-                            $filter = $alias . $char . '.' . $p['column'] . ' in ' . $value;
+                            $filter = $alias . $char . '.' . $p['column'] . " $opperation " . $value;
                             $this->filters[md5($filter)] = $filter;
                         } else {
                             $i = 0;
