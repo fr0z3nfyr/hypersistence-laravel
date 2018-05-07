@@ -30,6 +30,8 @@ class Engine {
     private static $TAG_PASSWORD_FIELD = 'passwordField';
     private static $TAG_REMEMBER_TOKEN_FIELD = 'rememberTokenField';
     private static $TAG_FILLABLE = 'fillable';
+    private static $TAG_AUDITABLE = 'auditable';
+    private static $TAG_AUDITABLE_FIELD = 'auditableField';
 
     /**
      * 
@@ -59,6 +61,7 @@ class Engine {
                 self::$map[$refClass->name] = array(
                     self::$TAG_TABLE => $table,
                     self::$TAG_JOIN_COLUMN => $joinColumn,
+                    self::$TAG_AUDITABLE => $joinColumn,
                     'parent' => $refClass->getParentClass()->name,
                     'class' => $refClass->name,
                     'properties' => array()
@@ -75,6 +78,8 @@ class Engine {
                 foreach ($properties as $p) {
                     if ($p->class == $refClass->name) {
                         $col = self::getAnnotationValue($p, self::$TAG_COLUMN);
+                        $auditable = self::is($p, self::$TAG_AUDITABLE);
+                        $auditableField = self::getAnnotationValue($p, self::$TAG_AUDITABLE_FIELD);
                         $relType = self::getRelType($p);
                         $pk = self::is($p, self::$TAG_PRIMARY_KEY);
                         $itemClass = '\\' . self::getAnnotationValue($p, self::$TAG_ITEM_CLASS);
@@ -127,6 +132,13 @@ class Engine {
                                 self::$TAG_REMEMBER_TOKEN_FIELD => self::is($p, self::$TAG_REMEMBER_TOKEN_FIELD),
                                 self::$TAG_FILLABLE => self::is($p, self::$TAG_FILLABLE),
                             );
+                            if ($auditable) {
+                                $value = self::getAnnotationValue($p, self::$TAG_AUDITABLE);
+                                self::$map[$refClass->name]['properties'][$p->name][self::$TAG_AUDITABLE] = $value ? $value : $p->name;
+                                if (!is_null($auditableField) && !empty($auditableField)) {
+                                    self::$map[$refClass->name]['properties'][$p->name][self::$TAG_AUDITABLE_FIELD] = $auditableField;
+                                }
+                            }
                         }
                     }
                 }
@@ -140,7 +152,7 @@ class Engine {
      */
     private static function getAnnotationValue($reflection, $annotation) {
         $refComments = $reflection->getDocComment();
-        if (preg_match('/@' . $annotation . '[ \t]*\([ \t]*([a-zA-Z_0-9\\\\%]+)?[ \t]*\)/', $refComments, $matches)) {
+        if (preg_match('/@' . $annotation . '[ \t]*\([ \t]*([a-zA-Z_0-9 âÂãÃ    áÁàÀêÊéÉèÈíÍìÌôÔõÕóÓòÒúÚùÙûÛçÇºª\\\\%]+)?[ \t]*\)/', $refComments, $matches)) {
             if (isset($matches[1])) {
                 return trim($matches[1]);
             }
@@ -491,8 +503,14 @@ class Engine {
         $get = 'get' . $pk['var'];
         $id = $this->$get();
 
+        $objOld = NULL;
         $new = is_null($id) || !$this->exists();
-
+        if (!$new) {
+            $objOld = new $classThis();
+            $set = 'set' . $pk['var'];
+            $objOld->$set($id);
+            $objOld->load();
+        }
         while ($class != '' && $class != 'Hypersistence') {
             $class = ltrim($class, '\\');
             $classes[] = $class;
@@ -595,8 +613,140 @@ class Engine {
                 }
             }
         }
+        return $this->saveChanges($classThis, $classes, $objOld);
+    }
 
+    private function saveChanges($classThis, $classes, $objOld) {
+        $stmt = DB::getDBConnection()->prepare("SHOW TABLES LIKE 'history'");
+        $stmt->execute();
+        $changes = $this->checkChanges($classThis, $classes, $objOld);
+        if ($stmt->rowCount() == 0 && count($changes) > 0) {
+            throw new \Exception('Table history no exists! Please, execute in console the follow command [php artisan hypersistence:make-history-table]');
+            exit;
+        }
+        if (count($changes) > 0) {
+            $user = \Illuminate\Support\Facades\Auth::user();
+            if ($user == NULL) {
+                throw new \Exception('Logged user not found through Facade Auth!');
+            }
+            $class = self::init($this);
+
+            if (!($user instanceof \Hypersistence\Hypersistence)) {
+                throw new \Exception('The auth user is not a instance of Hypersistence!');
+            }
+            $pk = self::getPk($class);
+            $getUserPk = 'get' . $pk['var'];
+
+            $pk = self::getPk($classThis);
+            $getThisPk = 'get' . $pk['var'];
+            foreach ($changes as $c) {
+                $h = new \Hypersistence\History();
+                $h->setAuthor($user->$getUserPk());
+                $h->setDate(date('Y-m-d H:i:s'));
+                $h->setDescription($c);
+                $h->setReferenceId($this->$getThisPk());
+                $h->setReferenceTable($this->getTableName());
+                if (!$h->save()) {
+                    throw new \Exception('Error to save History');
+                }
+            }
+        }
         return true;
+    }
+
+    private function checkChanges($classThis, $classes, $objOld) {
+        $changes = array();
+        $pk = self::getPk($classThis);
+        foreach ($classes as $class) {
+            $properties = self::$map[$class]['properties'];
+
+            foreach ($properties as $p) {
+                if ($p[self::$TAG_COLUMN] != $pk[self::$TAG_COLUMN] && $p['relType'] != self::MANY_TO_MANY && $p['relType'] != self::ONE_TO_MANY) {
+                    if (!isset($p[self::$TAG_AUDITABLE])) {
+                        continue;
+                    }
+                    if (is_null($objOld)) {
+                        return array('Efetuou o cadastro.');
+                    }
+                    $get = 'get' . $p['var'];
+                    $fields[] = $p[self::$TAG_COLUMN] . ' = :' . $p[self::$TAG_COLUMN];
+                    if ($p['relType'] == self::MANY_TO_ONE) {
+                        $attrObj = $this->$get();
+                        $attrObjOld = $objOld->$get();
+                        $desc = $this->checkChangesObject($p, $attrObj, $attrObjOld);
+                        if ($desc != '') {
+                            $changes[] = $desc;
+                        }
+                    } else {
+                        $title = $p[self::$TAG_AUDITABLE] != '' ? $p[self::$TAG_AUDITABLE] : $p['var'];
+                        $newValue = $this->$get();
+                        $oldValue = $objOld->$get();
+                        if ($newValue != $oldValue) {
+                            if ($oldValue == NULL) {
+                                $changes[] = 'Setou o campo ' . $title . ' para ' . $newValue . '.';
+                            } else if ($newValue == NULL) {
+                                $changes[] = 'Removeu o campo ' . $title . '. Valor antigo: ' . $oldValue . '.';
+                            } else {
+                                $changes[] = 'Alterou o campo ' . $title . ' de ' . $oldValue . ' para ' . $newValue . '.';
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return $changes;
+    }
+
+    private function checkChangesObject($property, $attrObj, $attrObjOld) {
+        if (($attrObj && $attrObj instanceof \Hypersistence\Hypersistence) || (($attrObjOld && $attrObjOld instanceof \Hypersistence\Hypersistence))) {
+            $objClass = $property[self::$TAG_ITEM_CLASS];
+            self::init($objClass);
+            if ($attrObjOld != NULL) {
+                $attrObjOld->load();
+            }
+            if ($attrObj != NULL) {
+                $attrObj->load();
+            }
+            $title = $property[self::$TAG_AUDITABLE] != '' ? $property[self::$TAG_AUDITABLE] : $property['var'];
+            if (isset($property[self::$TAG_AUDITABLE_FIELD])) {
+                $objMehtod = 'get' . $property[self::$TAG_AUDITABLE_FIELD];
+            } else {
+                $objPk = self::getPk($objClass);
+                $objMehtod = 'get' . $objPk['var'];
+            }
+            $var = $attrObj->$objMehtod();
+            if (!is_object($var)) {
+                if ($attrObjOld == NULL) {
+                    return 'Setou o campo ' . $title . ' para ' . $var . '.';
+                } else if ($attrObj == NULL) {
+                    return 'Removeu o campo ' . $title . '. Valor antigo: ' . $attrObjOld->$objMehtod() . '.';
+                } else if ($attrObjOld->$objMehtod() != $var) {
+                    return 'Alterou o campo ' . $title . ' de ' . $attrObjOld->$objMehtod() . ' para ' . $var . '.';
+                }
+            }
+        }
+        return '';
+    }
+
+    public function getHistoy() {
+        $pk = $this->getPrimaryKeyField();
+        $get = 'get' . $pk;
+
+        $h = new \Hypersistence\History();
+        $h->setReferenceId($this->$get());
+        $h->setReferenceTable($this->getTableName());
+        $list = $h->search()->execute();
+        if (count($list) > 0) {
+            foreach ($list as $idx => $h) {
+                $userClass = config('auth.providers.users.model');
+                $user = new $userClass();
+                $set = 'set' . $user->getPrimaryKeyField();
+                $user->$set($h->getAuthor());
+                $h->setAuthor($user);
+                $list[$idx] = $h;
+            }
+        }
+        return $list;
     }
 
     /**

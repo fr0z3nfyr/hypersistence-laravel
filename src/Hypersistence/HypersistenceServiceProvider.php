@@ -4,6 +4,7 @@ namespace Hypersistence;
 
 use Hypersistence\Console\CreateModelsHypersistence;
 use Hypersistence\Console\AuthMakeCommand;
+use Hypersistence\Console\CreateHistoryTable;
 use Illuminate\Support\ServiceProvider;
 
 class HypersistenceServiceProvider extends ServiceProvider {
@@ -17,7 +18,8 @@ class HypersistenceServiceProvider extends ServiceProvider {
 		if ($this->app->runningInConsole()) {
 		    $this->commands([
 		        CreateModelsHypersistence::class,
-		        AuthMakeCommand::class
+		        AuthMakeCommand::class,
+                        CreateHistoryTable::class
 		    ]);
 		}
 	}
