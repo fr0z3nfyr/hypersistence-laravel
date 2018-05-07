@@ -3,6 +3,7 @@
 namespace Hypersistence\Console;
 
 use Hypersistence\Hypersistence;
+use Illuminate\Console\Command;
 
 class CreateHistoryTable extends Command {
 
