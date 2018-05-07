@@ -625,23 +625,19 @@ class Engine {
             exit;
         }
         if (count($changes) > 0) {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            if ($user == NULL) {
-                throw new \Exception('Logged user not found through Facade Auth!');
-            }
             $class = self::init($this);
-
-            if (!($user instanceof \Hypersistence\Hypersistence)) {
-                throw new \Exception('The auth user is not a instance of Hypersistence!');
+            $user = \Illuminate\Support\Facades\Auth::user();
+            if ($user != NULL) {
+                if (!($user instanceof \Hypersistence\Hypersistence)) {
+                    throw new \Exception('The auth user is not a instance of Hypersistence!');
+                }
             }
-            $pk = self::getPk($class);
-            $getUserPk = 'get' . $pk['var'];
 
             $pk = self::getPk($classThis);
             $getThisPk = 'get' . $pk['var'];
             foreach ($changes as $c) {
                 $h = new \Hypersistence\History();
-                $h->setAuthor($user->$getUserPk());
+                $h->setAuthor($user != NULL ? $user->$getUserPk() : NULL);
                 $h->setDate(date('Y-m-d H:i:s'));
                 $h->setDescription($c);
                 $h->setReferenceId($this->$getThisPk());
@@ -738,12 +734,14 @@ class Engine {
         $list = $h->search()->execute();
         if (count($list) > 0) {
             foreach ($list as $idx => $h) {
-                $userClass = config('auth.providers.users.model');
-                $user = new $userClass();
-                $set = 'set' . $user->getPrimaryKeyField();
-                $user->$set($h->getAuthor());
-                $h->setAuthor($user);
-                $list[$idx] = $h;
+                if ($h->getAuthor() != NULL) {
+                    $userClass = config('auth.providers.users.model');
+                    $user = new $userClass();
+                    $set = 'set' . $user->getPrimaryKeyField();
+                    $user->$set($h->getAuthor());
+                    $h->setAuthor($user);
+                    $list[$idx] = $h;
+                }
             }
         }
         return $list;

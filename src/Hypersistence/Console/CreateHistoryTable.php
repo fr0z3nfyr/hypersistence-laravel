@@ -64,7 +64,7 @@ class CreateHistoryTable extends Command {
                 . "reference_id INT(11) NOT NULL,"
                 . "description VARCHAR(255) NOT NULL,"
                 . "`date` DATETIME NOT NULL,"
-                . "author_id $type NOT NULL,"
+                . "author_id $type NULL,"
                 . "PRIMARY KEY (id),"
                 . "FOREIGN KEY (author_id) REFERENCES $tableName ($primaryKeyField) ON DELETE NO ACTION,"
                 . "INDEX idx_history_id (id),"
