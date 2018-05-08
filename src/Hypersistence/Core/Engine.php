@@ -613,13 +613,13 @@ class Engine {
                 }
             }
         }
-        return $this->saveChanges($classThis, $classes, $objOld);
+        $changes = $this->checkChanges($classThis, $classes, $objOld);
+        return $this->saveChanges($changes);
     }
 
-    private function saveChanges($classThis, $classes, $objOld) {
+    private function saveChanges($changes) {
         $stmt = DB::getDBConnection()->prepare("SHOW TABLES LIKE 'history'");
         $stmt->execute();
-        $changes = $this->checkChanges($classThis, $classes, $objOld);
         if ($stmt->rowCount() == 0 && count($changes) > 0) {
             throw new \Exception('Table history no exists! Please, execute in console the follow command [php artisan hypersistence:make-history-table]');
             exit;
@@ -631,10 +631,11 @@ class Engine {
                 if (!($user instanceof \Hypersistence\Hypersistence)) {
                     throw new \Exception('The auth user is not a instance of Hypersistence!');
                 }
+                $pk = self::getPk($class);
+                $getUserPk = 'get' . $pk['var'];
             }
 
-            $pk = self::getPk($classThis);
-            $getThisPk = 'get' . $pk['var'];
+            $getThisPk = 'get' . $this->getPrimaryKeyField();
             foreach ($changes as $c) {
                 $h = new \Hypersistence\History();
                 $h->setAuthor($user != NULL ? $user->$getUserPk() : NULL);
@@ -678,9 +679,9 @@ class Engine {
                         $newValue = $this->$get();
                         $oldValue = $objOld->$get();
                         if ($newValue != $oldValue) {
-                            if ($oldValue == NULL) {
+                            if ($oldValue === NULL) {
                                 $changes[] = 'Setou o campo ' . $title . ' para ' . $newValue . '.';
-                            } else if ($newValue == NULL) {
+                            } else if ($newValue === NULL) {
                                 $changes[] = 'Removeu o campo ' . $title . '. Valor antigo: ' . $oldValue . '.';
                             } else {
                                 $changes[] = 'Alterou o campo ' . $title . ' de ' . $oldValue . ' para ' . $newValue . '.';
@@ -782,7 +783,7 @@ class Engine {
                         $class = $property[self::$TAG_ITEM_CLASS];
                         $obj = $arguments[0];
                         if ($obj instanceof $class) {
-
+                            $obj->load();
                             $table = '`' . $property['joinTable'] . '`';
                             $inverseColumn = $property[self::$TAG_INVERSE_JOIN_COLUMN];
                             $column = $property[self::$TAG_JOIN_COLUMN];
@@ -793,6 +794,13 @@ class Engine {
                             $get = 'get' . $pk['var'];
                             $inverseGet = 'get' . $inversePk['var'];
 
+                            $title = $property[self::$TAG_AUDITABLE] != '' ? $property[self::$TAG_AUDITABLE] : $property['var'];
+                            $action = $matches[1] == 'add' ? 'Adicionou' : 'Removeu';
+                            if (isset($property[self::$TAG_AUDITABLE_FIELD])) {
+                                $methodHistory = 'get' . $property[self::$TAG_AUDITABLE_FIELD];
+                            } else {
+                                $methodHistory = $inverseGet;
+                            }
                             if ($matches[1] == 'add') {
                                 $sql = "insert into $table ($column, $inverseColumn) values (:column, :inverseColumn)";
                             } else if ($matches[1] == 'delete') {
@@ -802,7 +810,8 @@ class Engine {
                                 $stmt->bindValue(':column', $this->$get());
                                 $stmt->bindValue(':inverseColumn', $obj->$inverseGet());
                                 if ($stmt->execute()) {
-                                    return true;
+                                    $changes[] = "$action $title " . $obj->$methodHistory();
+                                    return $this->saveChanges($changes);
                                 }
                             }
                         } else {
