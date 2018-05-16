@@ -725,7 +725,7 @@ class Engine {
         return '';
     }
 
-    public function getHistoy() {
+    public function getHistory() {
         $pk = $this->getPrimaryKeyField();
         $get = 'get' . $pk;
 
