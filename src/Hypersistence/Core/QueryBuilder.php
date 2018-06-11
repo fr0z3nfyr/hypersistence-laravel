@@ -115,15 +115,13 @@ class QueryBuilder {
         else
             $where = '';
 
-        if (count($this->joins) > 0) {
-            $count = 'distinct ifnull(' . implode(', \'\'),ifnull(', $fieldsNoAlias) . ', \'\')';
-        } else {
-            $count = '*';
-        }
-        $sql = 'select count(' . $count . ') as total from ' . implode(',', $tables) . ' ' . implode(' ', $this->joins) . $where;
+//        if (count($this->joins) > 0) {
+//            $count = 'distinct ifnull(' . implode(', \'\'),ifnull(', $fieldsNoAlias) . ', \'\')';
+//        } else {
+//            $count = '*';
+//        }
+//        $sql = 'select count(' . $count . ') as total from ' . implode(',', $tables) . ' ' . implode(' ', $this->joins) . $where;
 
-//        echo "$sql<BR>";
-//        var_dump($this->bounds);
         $bounds = array();
 
         foreach ($this->bounds as $key => $val) {
@@ -131,22 +129,24 @@ class QueryBuilder {
                 $bounds[$key] = $val;
             }
         }
-        if ($stmt = DB::getDBConnection()->prepare($sql)) {
-            if ($stmt->execute($bounds) && $stmt->rowCount() > 0) {
-                $result = $stmt->fetchObject();
-                $this->totalRows = $result->total;
-                $this->totalPages = $this->rows > 0 ? ceil($this->totalRows / $this->rows) : 1;
-            } else {
-                return array();
-                dd($stmt);
-            }
+//        if ($stmt = DB::getDBConnection()->prepare($sql)) {
+//            if ($stmt->execute($bounds) && $stmt->rowCount() > 0) {
+//                $result = $stmt->fetchObject();
+//                $this->totalRows = $result->total;
+//                $this->totalPages = $this->rows > 0 ? ceil($this->totalRows / $this->rows) : 1;
+//            } else {
+//                return array();
+//                dd($stmt);
+//            }
+//        }
+
+        $limit = '';
+        if($this->page > 0 && $this->rows > 0){
+            $limit = ' LIMIT :limit OFFSET :offset';
+            $offset = $this->page > 0 ? ($this->page - 1) * $this->rows : $this->offset;
+            $this->bounds[':offset'] = array($offset, DB::PARAM_INT);
+            $this->bounds[':limit'] = array($this->rows, DB::PARAM_INT);
         }
-
-        $offset = $this->page > 0 ? ($this->page - 1) * $this->rows : $this->offset;
-        $this->bounds[':offset'] = array($offset, DB::PARAM_INT);
-
-        $this->bounds[':limit'] = array(intval($this->rows > 0 ? $this->rows : $this->totalRows), DB::PARAM_INT);
-
 
         if (count($this->orderBy))
             $orderBy = ' order by ' . implode(',', $this->orderBy);
@@ -155,11 +155,16 @@ class QueryBuilder {
 
         $fields = array_merge($fields, $this->orderBy);
         $str_fields = str_replace(' desc', '', str_replace(' asc', '', implode(',', $fields)));
-        $sql = 'select distinct ' . $str_fields . ' from ' . implode(',', $tables) . ' ' . implode(' ', $this->joins) . $where . $orderBy . ' LIMIT :limit OFFSET :offset';
+        $sql = 'select SQL_CALC_FOUND_ROWS distinct ' . $str_fields . ' from ' . implode(',', $tables) . ' ' . implode(' ', $this->joins) . $where . $orderBy . $limit;
         if ($stmt = DB::getDBConnection()->prepare($sql)) {
 
             if ($stmt->execute($this->bounds) && $stmt->rowCount() > 0) {
-
+                $stm = DB::getDBConnection()->prepare('SELECT FOUND_ROWS() as total;');
+                $stm->execute();
+                $r = $stm->fetchObject();
+                $this->totalRows = $r->total;
+                $this->totalPages = $this->rows > 0 ? ceil($this->totalRows / $this->rows) : 1;
+                
                 while ($result = $stmt->fetchObject()) {
                     $class = $classThis;
                     $object = new $class;
