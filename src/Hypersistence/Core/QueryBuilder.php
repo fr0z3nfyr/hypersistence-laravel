@@ -554,7 +554,7 @@ class QueryBuilder {
      * @return \HypersistenceResultSet
      */
     public function setRows($rows) {
-        $this->rows = $rows >= 0 ? $rows : 0;
+        $this->rows = $rows >= 0 ? (int) $rows : 0;
         return $this;
     }
 
@@ -564,7 +564,7 @@ class QueryBuilder {
      * @return \HypersistenceResultSet
      */
     public function setOffset($offset) {
-        $this->offset = $offset >= 0 ? $offset : 0;
+        $this->offset = $offset >= 0 ? (int) $offset : 0;
         return $this;
     }
 
@@ -574,7 +574,7 @@ class QueryBuilder {
      * @return \HypersistenceResultSet
      */
     public function setPage($page) {
-        $this->page = $page >= 0 ? $page : 0;
+        $this->page = $page >= 0 ? (int) $page : 0;
         return $this;
     }
 

@@ -627,12 +627,17 @@ class Engine {
         if (count($changes) > 0) {
             $class = self::init($this);
             $user = \Illuminate\Support\Facades\Auth::user();
+            $userClass = config('auth.providers.users.model');
             if ($user != NULL) {
                 if (!($user instanceof \Hypersistence\Hypersistence)) {
                     throw new \Exception('The auth user is not a instance of Hypersistence!');
                 }
-                $pk = self::getPk($class);
-                $getUserPk = 'get' . $pk['var'];
+                if ($userClass != get_class($user)) {
+                    $user = NULL;
+                } else {
+                    $pk = self::getPk($class);
+                    $getUserPk = 'get' . $pk['var'];
+                }
             }
 
             $getThisPk = 'get' . $this->getPrimaryKeyField();
@@ -644,6 +649,7 @@ class Engine {
                 $h->setReferenceId($this->$getThisPk());
                 $h->setReferenceTable($this->getTableName());
                 if (!$h->save()) {
+                    dd($h->sqlErrorInfo);
                     throw new \Exception('Error to save History');
                 }
             }
