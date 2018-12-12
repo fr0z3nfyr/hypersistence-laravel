@@ -871,8 +871,9 @@ class Engine {
                     if ($p['relType'] == self::MANY_TO_ONE) {
                         if (isset($p[self::$TAG_TO_JSON_FIELD]) && $p[self::$TAG_TO_JSON_FIELD] != '') {
                             $getJsonField = 'get' . $p[self::$TAG_TO_JSON_FIELD];
-                            if ($this->$get() != NULL) {
-                                $result = $this->$get()->load()->$getJsonField();
+                            $obj = $this->$get();
+                            if ($obj != NULL && $obj->load()) {
+                                $result = $obj->$getJsonField();
                                 if ($result && $result instanceof \Hypersistence\Hypersistence) {
                                     $json[$field] = $result->toJSON();
                                 } else {
