@@ -799,14 +799,18 @@ class Engine {
 
                             $get = 'get' . $pk['var'];
                             $inverseGet = 'get' . $inversePk['var'];
-
-                            $title = $property[self::$TAG_AUDITABLE] != '' ? $property[self::$TAG_AUDITABLE] : $property['var'];
-                            $action = $matches[1] == 'add' ? 'Adicionou' : 'Removeu';
-                            if (isset($property[self::$TAG_AUDITABLE_FIELD])) {
-                                $methodHistory = 'get' . $property[self::$TAG_AUDITABLE_FIELD];
-                            } else {
-                                $methodHistory = $inverseGet;
+                            $changes=[];
+                            if (isset($property[self::$TAG_AUDITABLE])) {
+                                $title = $property[self::$TAG_AUDITABLE] != '' ? $property[self::$TAG_AUDITABLE] : $property['var'];
+                                $action = $matches[1] == 'add' ? 'Adicionou' : 'Removeu';
+                                if (isset($property[self::$TAG_AUDITABLE_FIELD])) {
+                                    $methodHistory = 'get' . $property[self::$TAG_AUDITABLE_FIELD];
+                                } else {
+                                    $methodHistory = $inverseGet;
+                                }
+                                $changes[] = "$action $title " . $obj->$methodHistory();
                             }
+
                             if ($matches[1] == 'add') {
                                 $sql = "insert into $table ($column, $inverseColumn) values (:column, :inverseColumn)";
                             } else if ($matches[1] == 'delete') {
@@ -816,7 +820,6 @@ class Engine {
                                 $stmt->bindValue(':column', $this->$get());
                                 $stmt->bindValue(':inverseColumn', $obj->$inverseGet());
                                 if ($stmt->execute()) {
-                                    $changes[] = "$action $title " . $obj->$methodHistory();
                                     return $this->saveChanges($changes);
                                 }
                             }
