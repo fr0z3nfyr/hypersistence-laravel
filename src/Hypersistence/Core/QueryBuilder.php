@@ -414,6 +414,10 @@ class QueryBuilder {
                     break 2;
                 }
             }
+            
+            if (isset(Engine::$map[$auxClass]['joinColumn'])) {
+                $property['column'] = Engine::$map[$auxClass]['joinColumn'];
+            }
             $auxClass = Engine::$map[$auxClass]['parent'];
             $i++;
         }
@@ -442,7 +446,7 @@ class QueryBuilder {
                 if ($p['var'] == $var) {
                     $p['i'] = $i;
                     if ($p['relType'] == Engine::MANY_TO_ONE) {
-                        $this->joinPersonalFilter($auxClass, $p, $parts, $classAlias, $alias);
+                        $this->joinPersonalFilter($auxClass, $p, $parts, $opperation, $value, $classAlias, $alias);
                     } else {
                         if ("in" == strtolower($opperation)) {
                             $filter = $alias . $char . '.' . $p['column'] . " $opperation " . $value;
