@@ -141,7 +141,7 @@ class QueryBuilder {
 //        }
 
         $limit = '';
-        if($this->page > 0 && $this->rows > 0){
+        if ($this->page > 0 && $this->rows > 0) {
             $limit = ' LIMIT :limit OFFSET :offset';
             $offset = $this->page > 0 ? ($this->page - 1) * $this->rows : $this->offset;
             $this->bounds[':offset'] = array($offset, DB::PARAM_INT);
@@ -155,7 +155,7 @@ class QueryBuilder {
 
         $fields = array_merge($fields, $this->orderBy);
         $str_fields = str_replace(' desc', '', str_replace(' asc', '', implode(',', $fields)));
-        $sql = 'select SQL_CALC_FOUND_ROWS distinct ' . $str_fields . ' from ' . implode(',', $tables) . ' ' . implode(' ', $this->joins) . $where . $orderBy . $limit;
+        $sql = 'select SQL_CALC_FOUND_ROWS ' . $str_fields . ' from ' . implode(',', $tables) . ' ' . implode(' ', $this->joins) . $where . $orderBy . $limit;
         if ($stmt = DB::getDBConnection()->prepare($sql)) {
 
             if ($stmt->execute($this->bounds) && $stmt->rowCount() > 0) {
@@ -164,7 +164,7 @@ class QueryBuilder {
                 $r = $stm->fetchObject();
                 $this->totalRows = $r->total;
                 $this->totalPages = $this->rows > 0 ? ceil($this->totalRows / $this->rows) : 1;
-                
+
                 while ($result = $stmt->fetchObject()) {
                     $class = $classThis;
                     $object = new $class;
@@ -414,10 +414,6 @@ class QueryBuilder {
                     break 2;
                 }
             }
-            
-            if (isset(Engine::$map[$auxClass]['joinColumn'])) {
-                $property['column'] = Engine::$map[$auxClass]['joinColumn'];
-            }
             $auxClass = Engine::$map[$auxClass]['parent'];
             $i++;
         }
@@ -446,7 +442,7 @@ class QueryBuilder {
                 if ($p['var'] == $var) {
                     $p['i'] = $i;
                     if ($p['relType'] == Engine::MANY_TO_ONE) {
-                        $this->joinPersonalFilter($auxClass, $p, $parts, $opperation, $value, $classAlias, $alias);
+                        $this->joinPersonalFilter($auxClass, $p, $parts, $classAlias, $alias);
                     } else {
                         if ("in" == strtolower($opperation)) {
                             $filter = $alias . $char . '.' . $p['column'] . " $opperation " . $value;
@@ -500,6 +496,15 @@ class QueryBuilder {
             $this->joins[md5($join)] = $join;
             $classAlias = $alias . $char;
 
+            $getPkField = 'get' . $pk['var'];
+            $value = $object->$getPkField();
+            if (!is_null($value) && $value != 0 && !empty($value)) {
+                $filter = $alias . $char . '.' . $pk['column'] . ' = :' . $alias . $char . '_' . $pk['column'];
+                $this->filters[md5($filter)] = $filter;
+                $this->bounds[':' . $alias . $char . '_' . $pk['column']] = $value;
+                return;
+            }
+            
             $property = $pk;
             $last = Engine::$map[$auxClass];
             foreach (Engine::$map[$auxClass]['properties'] as $p) {
