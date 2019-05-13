@@ -414,6 +414,9 @@ class QueryBuilder {
                     break 2;
                 }
             }
+            if (isset(Engine::$map[$auxClass]['joinColumn'])) {
+                $property['column'] = Engine::$map[$auxClass]['joinColumn'];
+            }
             $auxClass = Engine::$map[$auxClass]['parent'];
             $i++;
         }
