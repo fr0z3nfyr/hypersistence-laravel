@@ -46,31 +46,20 @@ class CreateHistoryTable extends Command {
             $this->info("Table already exists");
             exit;
         }
-
-        $userClass = config('auth.providers.users.model');
-        $user = new $userClass();
-        $tableName = $user->getTableName();
-        $primaryKeyField = $user->getPrimaryKeyField();
-        $sqlType = "show Columns from $tableName where Field = '$primaryKeyField'";
-
-        $stmt = Hypersistence::getDBConnection()->prepare($sqlType);
-        $stmt->execute();
-        $r = $stmt->fetchObject();
-        $type = strtoupper($r->Type);
-
         $sql = "CREATE TABLE history("
                 . "id INT(11) UNSIGNED AUTO_INCREMENT,"
                 . "reference_table VARCHAR(50) NOT NULL,"
                 . "reference_id INT(11) NOT NULL,"
                 . "description VARCHAR(255) NOT NULL,"
                 . "`date` DATETIME NOT NULL,"
-                . "author_id $type NULL,"
+                . "author_id INT(11) NULL,"
+                . "author_table VARCHAR(50) NULL,"
                 . "PRIMARY KEY (id),"
-                . "FOREIGN KEY (author_id) REFERENCES $tableName ($primaryKeyField) ON DELETE NO ACTION,"
                 . "INDEX idx_history_id (id),"
                 . "INDEX idx_history_reference_table (reference_table),"
                 . "INDEX idx_history_reference_id (reference_id),"
-                . "INDEX idx_history_author_id (author_id))";
+                . "INDEX idx_history_author_id (author_id)"
+                . "INDEX idx_history_author_table (author_table))";
 
         $stmt = Hypersistence::getDBConnection()->prepare($sql);
         if ($stmt->execute()) {

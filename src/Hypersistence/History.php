@@ -38,6 +38,11 @@ class History extends Hypersistence {
      */
     private $date;
 
+    /**
+     * @column(author_table)
+     */
+    private $authorTable;
+
     public function getId() {
         return $this->id;
     }
@@ -45,7 +50,7 @@ class History extends Hypersistence {
     public function setId($id) {
         $this->id = $id;
     }
-    
+
     public function getReferenceId() {
         return $this->referenceId;
     }
@@ -84,6 +89,14 @@ class History extends Hypersistence {
 
     public function setDate($date) {
         $this->date = $date;
+    }
+    
+    function getAuthorTable() {
+        return $this->authorTable;
+    }
+
+    function setAuthorTable($authorTable) {
+        $this->authorTable = $authorTable;
     }
 
 }

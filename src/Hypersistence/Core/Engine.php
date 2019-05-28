@@ -627,23 +627,18 @@ class Engine {
         if (count($changes) > 0) {
             $class = self::init($this);
             $user = \Illuminate\Support\Facades\Auth::user();
-            $userClass = config('auth.providers.users.model');
             if ($user != NULL) {
                 if (!($user instanceof \Hypersistence\Hypersistence)) {
                     throw new \Exception('The auth user is not a instance of Hypersistence!');
                 }
-                if ($userClass != get_class($user)) {
-                    $user = NULL;
-                } else {
-                    $pk = self::getPk($class);
-                    $getUserPk = 'get' . $pk['var'];
-                }
+                $pk = self::getPk($class);
+                $getUserPk = 'get' . $pk['var'];
             }
-
             $getThisPk = 'get' . $this->getPrimaryKeyField();
             foreach ($changes as $c) {
                 $h = new \Hypersistence\History();
                 $h->setAuthor($user != NULL ? $user->$getUserPk() : NULL);
+                $h->setAuthorTable($user != NULL ? $user->getTableName() : NULL);
                 $h->setDate(date('Y-m-d H:i:s'));
                 $h->setDescription($c);
                 $h->setReferenceId($this->$getThisPk());
@@ -799,7 +794,7 @@ class Engine {
 
                             $get = 'get' . $pk['var'];
                             $inverseGet = 'get' . $inversePk['var'];
-                            $changes=[];
+                            $changes = [];
                             if (isset($property[self::$TAG_AUDITABLE])) {
                                 $title = $property[self::$TAG_AUDITABLE] != '' ? $property[self::$TAG_AUDITABLE] : $property['var'];
                                 $action = $matches[1] == 'add' ? 'Adicionou' : 'Removeu';
