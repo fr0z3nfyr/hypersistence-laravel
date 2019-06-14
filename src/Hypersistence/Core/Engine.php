@@ -681,7 +681,7 @@ class Engine {
                         $oldValue = $objOld->$get();
                         if ($newValue != $oldValue) {
                             if ($oldValue === NULL) {
-                                $changes[] = 'Setou o campo ' . $title . ' para ' . $newValue . '.';
+                                $changes[] = 'Configurou o campo ' . $title . ' para ' . $newValue . '.';
                             } else if ($newValue === NULL) {
                                 $changes[] = 'Removeu o campo ' . $title . '. Valor antigo: ' . $oldValue . '.';
                             } else {
