@@ -53,13 +53,13 @@ class CreateHistoryTable extends Command {
                 . "description VARCHAR(255) NOT NULL,"
                 . "`date` DATETIME NOT NULL,"
                 . "author_id INT(11) NULL,"
-                . "author_table VARCHAR(50) NULL,"
+                . "author_class VARCHAR(60) NULL,"
                 . "PRIMARY KEY (id),"
                 . "INDEX idx_history_id (id),"
                 . "INDEX idx_history_reference_table (reference_table),"
                 . "INDEX idx_history_reference_id (reference_id),"
                 . "INDEX idx_history_author_id (author_id)"
-                . "INDEX idx_history_author_table (author_table))";
+                . "INDEX idx_history_author_class (author_class))";
 
         $stmt = Hypersistence::getDBConnection()->prepare($sql);
         if ($stmt->execute()) {

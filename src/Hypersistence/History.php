@@ -39,16 +39,12 @@ class History extends Hypersistence {
     private $date;
 
     /**
-     * @column(author_table)
+     * @column(author_class)
      */
-    private $authorTable;
+    private $authorClass;
 
     public function getId() {
         return $this->id;
-    }
-
-    public function setId($id) {
-        $this->id = $id;
     }
 
     public function getReferenceId() {
@@ -59,6 +55,26 @@ class History extends Hypersistence {
         return $this->referenceTable;
     }
 
+    public function getAuthor() {
+        return $this->author;
+    }
+
+    public function getDescription() {
+        return $this->description;
+    }
+
+    public function getDate() {
+        return $this->date;
+    }
+
+    public function getAuthorClass() {
+        return $this->authorClass;
+    }
+
+    public function setId($id) {
+        $this->id = $id;
+    }
+
     public function setReferenceId($referenceId) {
         $this->referenceId = $referenceId;
     }
@@ -67,36 +83,19 @@ class History extends Hypersistence {
         $this->referenceTable = $referenceTable;
     }
 
-    public function getAuthor() {
-        return $this->author;
-    }
-
     public function setAuthor($author) {
         $this->author = $author;
-    }
-
-    public function getDescription() {
-        return $this->description;
     }
 
     public function setDescription($description) {
         $this->description = $description;
     }
 
-    public function getDate() {
-        return $this->date;
-    }
-
     public function setDate($date) {
         $this->date = $date;
     }
-    
-    function getAuthorTable() {
-        return $this->authorTable;
-    }
 
-    function setAuthorTable($authorTable) {
-        $this->authorTable = $authorTable;
+    public function setAuthorClass($authorClass) {
+        $this->authorClass = $authorClass;
     }
-
 }

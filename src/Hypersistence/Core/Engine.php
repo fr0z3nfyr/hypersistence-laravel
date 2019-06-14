@@ -638,13 +638,13 @@ class Engine {
             foreach ($changes as $c) {
                 $h = new \Hypersistence\History();
                 $h->setAuthor($user != NULL ? $user->$getUserPk() : NULL);
-                $h->setAuthorTable($user != NULL ? $user->getTableName() : NULL);
+                $h->setAuthorClass($user != NULL ? "\\".get_class($user) : NULL);
                 $h->setDate(date('Y-m-d H:i:s'));
                 $h->setDescription($c);
                 $h->setReferenceId($this->$getThisPk());
                 $h->setReferenceTable($this->getTableName());
                 if (!$h->save()) {
-                    dd($h->sqlErrorInfo);
+//                    dd($h->sqlErrorInfo);
                     throw new \Exception('Error to save History');
                 }
             }
@@ -737,7 +737,7 @@ class Engine {
         if (count($list) > 0) {
             foreach ($list as $idx => $h) {
                 if ($h->getAuthor() != NULL) {
-                    $userClass = config('auth.providers.users.model');
+                    $userClass = $h->getAuthorClass();
                     $user = new $userClass();
                     $set = 'set' . $user->getPrimaryKeyField();
                     $user->$set($h->getAuthor());
