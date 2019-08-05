@@ -46,7 +46,7 @@ trait RoutesNotifications {
     }
 
     /**
-     * Mark the notification as read. testando só pra rir
+     * Mark the notification as read.
      *
      * @return void
      */
