@@ -25,7 +25,6 @@ trait RoutesNotifications {
         $notification->setNotifiableType($this->getTableName());
         $notification->setCreatedAt(date("Y-m-d H:i:s"));
         if (!$notification->save()) {
-//            abort(500, "Erro ao valvar notificação = " . print_r($notification->sqlErrorInfo(), 1));
             abort(500, "Erro ao valvar notificação.");
         } else {
             Hypersistence::commit();
@@ -34,7 +33,7 @@ trait RoutesNotifications {
     }
 
     /**
-     * Rwmove the notification.
+     * Remove the notification.
      *
      * @return void
      */
@@ -47,7 +46,7 @@ trait RoutesNotifications {
     }
 
     /**
-     * Mark the notification as read.
+     * Mark the notification as read. testando só pra rir
      *
      * @return void
      */
@@ -59,7 +58,7 @@ trait RoutesNotifications {
         if ($notification->isLoaded() && is_null($notification->getReadAt())) {
             $notification->setReadAt(date("Y-m-d H:i:s"));
             if (!$notification->save()) {
-                abort(500, "Erro ao valvar notificação = " . print_r($notification->sqlErrorInfo(), 1));
+                abort(500, "Erro ao marcar notificação como lida");
             } else {
                 Hypersistence::commit();
                 return true;
