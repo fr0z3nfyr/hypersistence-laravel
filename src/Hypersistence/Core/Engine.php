@@ -32,7 +32,6 @@ class Engine {
     private static $TAG_FILLABLE = 'fillable';
     private static $TAG_AUDITABLE = 'auditable';
     private static $TAG_AUDITABLE_FIELD = 'auditableField';
-    public static $con;
 
     /**
      * 
@@ -43,7 +42,6 @@ class Engine {
     }
 
     public static function init($class) {
-        self::$con = &DB::getDBConnection();
         $refClass = new \ReflectionClass($class);
         self::mapClass($refClass);
         return '\\' . $refClass->name;
@@ -283,7 +281,7 @@ class Engine {
             $get = 'get' . $pk['var'];
             $joins[] = $aliases[$pk['i']] . '.' . $pk[self::$TAG_COLUMN] . ' = ' . ':' . $aliases[$pk['i']] . '_' . $pk[self::$TAG_COLUMN];
             $bounds[':' . $aliases[$pk['i']] . '_' . $pk[self::$TAG_COLUMN]] = $this->$get();
-            }
+        }
 
 
         $i = 0;
@@ -310,7 +308,7 @@ class Engine {
 
         $sql = 'select ' . implode(',', $fields) . ' from ' . implode(',', $tables) . ' where ' . implode(' and ', $joins);
 
-        if ($stmt = self::$con->prepare($sql)) {
+        if ($stmt = DB::getDBConnection()->prepare($sql)) {
             if ($stmt->execute($bounds) && $stmt->rowCount() > 0) {
                 $this->loaded = true;
                 $result = $stmt->fetchObject();
@@ -387,7 +385,7 @@ class Engine {
                 return false;
             }
         } else {
-            $this->sqlErrorInfo[] = self::$con->errorInfo();
+            $this->sqlErrorInfo[] = DB::getDBConnection()->errorInfo();
             return false;
         }
         return $this;
@@ -429,14 +427,14 @@ class Engine {
 
         $sql = 'delete ' . implode(',', $tables) . ' from ' . implode(',', $tables) . ' where ' . implode(' and ', $joins);
 
-        if ($stmt = self::$con->prepare($sql)) {
+        if ($stmt = DB::getDBConnection()->prepare($sql)) {
             if ($stmt->execute($bounds)) {
                 return true;
             } else {
                 $this->sqlErrorInfo[] = $stmt->errorInfo();
             }
         }
-        $this->sqlErrorInfo[] = self::$con->errorInfo();
+        $this->sqlErrorInfo[] = DB::getDBConnection()->errorInfo();
         return false;
     }
 
@@ -476,7 +474,7 @@ class Engine {
 
         $sql = 'select count(*) as total from ' . implode(',', $tables) . ' where ' . implode(' and ', $joins);
 
-        if ($stmt = self::$con->prepare($sql)) {
+        if ($stmt = DB::getDBConnection()->prepare($sql)) {
             if ($stmt->execute($bounds)) {
                 $res = $stmt->fetchObject();
                 if ($res->total > 0) {
@@ -486,7 +484,7 @@ class Engine {
                 $this->sqlErrorInfo[] = $stmt->errorInfo();
             }
         }
-        $this->sqlErrorInfo[] = self::$con->errorInfo();
+        $this->sqlErrorInfo[] = DB::getDBConnection()->errorInfo();
         return false;
     }
 
@@ -533,7 +531,7 @@ class Engine {
                 foreach ($properties as $p) {
                     if ($p[self::$TAG_COLUMN] != $pk[self::$TAG_COLUMN] && $p['relType'] != self::MANY_TO_MANY && $p['relType'] != self::ONE_TO_MANY) {
                         $get = 'get' . $p['var'];
-                        $fields[] = '"' . $p[self::$TAG_COLUMN] . '" = :' . $p[self::$TAG_COLUMN];
+                        $fields[] = $p[self::$TAG_COLUMN] . ' = :' . $p[self::$TAG_COLUMN];
                         if ($p['relType'] == self::MANY_TO_ONE) {
                             $obj = $this->$get();
                             if ($obj && $obj instanceof \Hypersistence\Hypersistence) {
@@ -550,8 +548,9 @@ class Engine {
                         }
                     }
                 }
+
                 if (count($fields)) {
-                    $sql = 'update "' . self::$map[$class][self::$TAG_TABLE] . '" set ' . implode(',', $fields) . ' where ' . $where;
+                    $sql = 'update `' . self::$map[$class][self::$TAG_TABLE] . '` set ' . implode(',', $fields) . ' where ' . $where;
                 }
             } else {//INSERT
                 $values = array();
@@ -559,18 +558,15 @@ class Engine {
 
                 $joinColumn = self::$map[$class][self::$TAG_JOIN_COLUMN];
                 if ($joinColumn) {
-                    $fields[] = '"' . $joinColumn . '"';
+                    $fields[] = $joinColumn;
                     $values[] = ':' . $joinColumn;
                     $bounds[':' . $joinColumn] = $id;
                 }
 
                 foreach ($properties as $p) {
-                    if ($p['var'] == $this->getPrimaryKeyField()) {
-                        continue;
-                    }
                     if ($p['relType'] != self::MANY_TO_MANY && $p['relType'] != self::ONE_TO_MANY) {
                         $get = 'get' . $p['var'];
-                        $fields[] = '"' . $p[self::$TAG_COLUMN] . '"';
+                        $fields[] = $p[self::$TAG_COLUMN];
                         $values[] = ':' . $p[self::$TAG_COLUMN];
                         if ($p['relType'] == self::MANY_TO_ONE) {
                             $obj = $this->$get();
@@ -590,16 +586,16 @@ class Engine {
                 }
 
                 if (count($fields)) {
-                    $sql = 'insert into "' . self::$map[$class][self::$TAG_TABLE] . '" (' . implode(',', $fields) . ') values (' . implode(',', $values) . ')';
+                    $sql = 'insert into `' . self::$map[$class][self::$TAG_TABLE] . '` (' . implode(',', $fields) . ') values (' . implode(',', $values) . ')';
                 }
             }
             if ($sql != '') {
 
-                if ($stmt = self::$con->prepare($sql)) {
+                if ($stmt = DB::getDBConnection()->prepare($sql)) {
 
                     if ($stmt->execute($bounds)) {
                         if ($new) {
-                            $lastId = self::$con->lastInsertId();
+                            $lastId = DB::getDBConnection()->lastInsertId();
                             if ($lastId) {
                                 $id = $lastId;
                                 $pk = self::getPk(self::init($this));
@@ -612,7 +608,7 @@ class Engine {
                         return false;
                     }
                 } else {
-                    $this->sqlErrorInfo[] = self::$con->errorInfo();
+                    $this->sqlErrorInfo[] = DB::getDBConnection()->errorInfo();
                     return false;
                 }
             }
@@ -622,41 +618,34 @@ class Engine {
     }
 
     private function saveChanges($changes) {
+        $stmt = DB::getDBConnection()->prepare("SHOW TABLES LIKE 'history'");
+        $stmt->execute();
+        if ($stmt->rowCount() == 0 && count($changes) > 0) {
+            throw new \Exception('Table history no exists! Please, execute in console the follow command [php artisan hypersistence:make-history-table]');
+            exit;
+        }
         if (count($changes) > 0) {
-            $stmt = self::$con->prepare("SHOW TABLES LIKE 'history'");
-            $stmt->execute();
-            if ($stmt->rowCount() == 0 && count($changes) > 0) {
-                throw new \Exception('Table history no exists! Please, execute in console the follow command [php artisan hypersistence:make-history-table]');
-                exit;
-            }
-            if (count($changes) > 0) {
-                $class = self::init($this);
-                $user = \Illuminate\Support\Facades\Auth::user();
-                $userClass = config('auth.providers.users.model');
-                if ($user != NULL) {
-                    if (!($user instanceof \Hypersistence\Hypersistence)) {
-                        throw new \Exception('The auth user is not a instance of Hypersistence!');
-                    }
-                    if ($userClass != get_class($user)) {
-                        $user = NULL;
-                    } else {
-                        $pk = self::getPk($class);
-                        $getUserPk = 'get' . $pk['var'];
-                    }
+            $class = self::init($this);
+            $user = \Illuminate\Support\Facades\Auth::user();
+            if ($user != NULL) {
+                if (!($user instanceof \Hypersistence\Hypersistence)) {
+                    throw new \Exception('The auth user is not a instance of Hypersistence!');
                 }
-
-                $getThisPk = 'get' . $this->getPrimaryKeyField();
-                foreach ($changes as $c) {
-                    $h = new \Hypersistence\History();
-                    $h->setAuthor($user != NULL ? $user->$getUserPk() : NULL);
-                    $h->setDate(date('Y-m-d H:i:s'));
-                    $h->setDescription($c);
-                    $h->setReferenceId($this->$getThisPk());
-                    $h->setReferenceTable($this->getTableName());
-                    if (!$h->save()) {
-                        dd($h->sqlErrorInfo);
-                        throw new \Exception('Error to save History');
-                    }
+                $pk = self::getPk($class);
+                $getUserPk = 'get' . $pk['var'];
+            }
+            $getThisPk = 'get' . $this->getPrimaryKeyField();
+            foreach ($changes as $c) {
+                $h = new \Hypersistence\History();
+                $h->setAuthor($user != NULL ? $user->$getUserPk() : NULL);
+                $h->setAuthorClass($user != NULL ? "\\".get_class($user) : NULL);
+                $h->setDate(date('Y-m-d H:i:s'));
+                $h->setDescription($c);
+                $h->setReferenceId($this->$getThisPk());
+                $h->setReferenceTable($this->getTableName());
+                if (!$h->save()) {
+//                    dd($h->sqlErrorInfo);
+                    throw new \Exception('Error to save History');
                 }
             }
         }
@@ -692,7 +681,7 @@ class Engine {
                         $oldValue = $objOld->$get();
                         if ($newValue != $oldValue) {
                             if ($oldValue === NULL) {
-                                $changes[] = 'Setou o campo ' . $title . ' para ' . $newValue . '.';
+                                $changes[] = 'Configurou o campo ' . $title . ' para ' . $newValue . '.';
                             } else if ($newValue === NULL) {
                                 $changes[] = 'Removeu o campo ' . $title . '. Valor antigo: ' . $oldValue . '.';
                             } else {
@@ -748,7 +737,7 @@ class Engine {
         if (count($list) > 0) {
             foreach ($list as $idx => $h) {
                 if ($h->getAuthor() != NULL) {
-                    $userClass = config('auth.providers.users.model');
+                    $userClass = $h->getAuthorClass();
                     $user = new $userClass();
                     $set = 'set' . $user->getPrimaryKeyField();
                     $user->$set($h->getAuthor());
@@ -822,7 +811,7 @@ class Engine {
                             } else if ($matches[1] == 'delete') {
                                 $sql = "delete from $table where $column = :column and $inverseColumn = :inverseColumn";
                             }
-                            if ($stmt = self::$con->prepare($sql)) {
+                            if ($stmt = DB::getDBConnection()->prepare($sql)) {
                                 $stmt->bindValue(':column', $this->$get());
                                 $stmt->bindValue(':inverseColumn', $obj->$inverseGet());
                                 if ($stmt->execute()) {
@@ -842,11 +831,11 @@ class Engine {
     }
 
     public static function commit() {
-        return self::$con->commit();
+        return DB::getDBConnection()->commit();
     }
 
     public static function rollback() {
-        return self::$con->rollBack();
+        return DB::getDBConnection()->rollBack();
     }
 
     public function sqlErrorInfo() {
