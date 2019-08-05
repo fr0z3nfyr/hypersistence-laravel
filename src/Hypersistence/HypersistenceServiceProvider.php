@@ -6,7 +6,7 @@ use Hypersistence\Console\CreateModelsHypersistence;
 use Hypersistence\Console\AuthMakeCommand;
 use Hypersistence\Console\CreateHistoryTable;
 use Illuminate\Support\ServiceProvider;
- Hypersistence\Console\CreateNotificationTable;
+use Hypersistence\Console\CreateNotificationTable;
  
 class HypersistenceServiceProvider extends ServiceProvider {
 	/**

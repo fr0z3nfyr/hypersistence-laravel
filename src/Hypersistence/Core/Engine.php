@@ -290,7 +290,7 @@ class Engine {
         while ($class != '' && $class != 'Hypersistence') {
             $alias = $aliases[$i];
             $class = ltrim($class, '\\');
-            $tables[] = '' . self::$map[$class][self::$TAG_TABLE] . ' ' . $alias;
+            $tables[] = '`' . self::$map[$class][self::$TAG_TABLE] . '` ' . $alias;
 
             if (self::$map[$class]['parent'] != 'Hypersistence') {
                 $parent = self::$map[$class]['parent'];
@@ -415,7 +415,7 @@ class Engine {
         $i = 0;
         while ($class != '' && $class != 'Hypersistence') {
             $class = ltrim($class, '\\');
-            $table = '"' . self::$map[$class][self::$TAG_TABLE] . '"';
+            $table = '`' . self::$map[$class][self::$TAG_TABLE] . '`';
             $tables[] = $table;
             $parent = self::$map[$class]['parent'];
             if ($parent != 'Hypersistence') {
@@ -462,7 +462,7 @@ class Engine {
         $i = 0;
         while ($class != '' && $class != 'Hypersistence') {
             $class = ltrim($class, '\\');
-            $table = '"' . self::$map[$class][self::$TAG_TABLE] . '"';
+            $table = '`' . self::$map[$class][self::$TAG_TABLE] . '`';
             $tables[] = $table;
             $parent = self::$map[$class]['parent'];
             if ($parent != 'Hypersistence') {
@@ -796,7 +796,7 @@ class Engine {
                         $obj = $arguments[0];
                         if ($obj instanceof $class) {
                             $obj->load();
-                            $table = '' . $property['joinTable'] . '';
+                            $table = '`' . $property['joinTable'] . '`';
                             $inverseColumn = $property[self::$TAG_INVERSE_JOIN_COLUMN];
                             $column = $property[self::$TAG_JOIN_COLUMN];
 
