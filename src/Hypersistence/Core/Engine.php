@@ -995,6 +995,17 @@ class Engine {
         }
         return $p;
     }
+    
+    public static function loadById($id) {
+        $r = new \ReflectionClass(get_called_class());
+
+        $className = $r->getName();
+        $p = new $className();
+        $pk = $p->getPrimaryKeyField();
+        $setter = "set$pk";
+        $p->$setter($id);
+        return $p->load();
+    }
 
     public function getTableName() {
         $refClass = new \ReflectionClass($this);
