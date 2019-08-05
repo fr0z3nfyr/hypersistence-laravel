@@ -6,7 +6,8 @@ use Hypersistence\Console\CreateModelsHypersistence;
 use Hypersistence\Console\AuthMakeCommand;
 use Hypersistence\Console\CreateHistoryTable;
 use Illuminate\Support\ServiceProvider;
-
+ Hypersistence\Console\CreateNotificationTable;
+ 
 class HypersistenceServiceProvider extends ServiceProvider {
 	/**
 	* Bootstrap the application services.
@@ -19,7 +20,8 @@ class HypersistenceServiceProvider extends ServiceProvider {
 		    $this->commands([
 		        CreateModelsHypersistence::class,
 		        AuthMakeCommand::class,
-                        CreateHistoryTable::class
+                        CreateHistoryTable::class,
+                        CreateNotificationTable::class
 		    ]);
 		}
 	}

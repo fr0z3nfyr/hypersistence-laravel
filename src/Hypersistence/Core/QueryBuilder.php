@@ -18,11 +18,13 @@ class QueryBuilder {
     private $orderBy = array();
     private $filters = array();
     private $bounds = array();
+    private $con;
 
     public function __construct($object, $srcObject = null, $property = null) {
         $this->object = $object;
         $this->property = $property;
         $this->srcObject = $srcObject;
+        $this->con = &DB::getDBConnection();
     }
 
     /**
@@ -52,7 +54,7 @@ class QueryBuilder {
             $srcId = $this->srcObject->$srcGet();
             $pk = Engine::getPk($class);
 
-            $tables[] = '`' . $this->property['joinTable'] . '`';
+            $tables[] = '"' . $this->property['joinTable'] . '"';
             $filter = $this->property['joinTable'] . '.' . $this->property['joinColumn'] . ' = :' . $this->property['joinTable'] . '_' . $this->property['joinColumn'];
             $this->filters[md5($filter)] = $filter;
             $this->bounds[':' . $this->property['joinTable'] . '_' . $this->property['joinColumn']] = $srcId;
@@ -65,7 +67,7 @@ class QueryBuilder {
         while ($class != 'Hypersistence') {
             $alias = str_replace('\\', '', $this->chars[$i]);
             $class = ltrim($class, '\\');
-            $joinTable = '`' . Engine::$map[$class]['table'] . '` ' . $alias;
+            $joinTable = '"' . Engine::$map[$class]['table'] . '" ' . $alias;
             if ($i == 0) {
                 $tables[] = $joinTable;
             } else {
@@ -91,7 +93,8 @@ class QueryBuilder {
                             $this->joinFilter($class, $p, $value, $alias);
                         }
                     } else {
-                        if (is_numeric($value)) {
+                        $mode = $p['searchMode'];
+                        if (is_numeric($value) || $mode === '') {
                             $filter = $alias . '.' . $p['column'] . ' = :' . $alias . '_' . $p['column'];
                             $this->filters[md5($filter)] = $filter;
                             $this->bounds[':' . $alias . '_' . $p['column']] = $value;
@@ -115,13 +118,13 @@ class QueryBuilder {
         else
             $where = '';
 
-//        if (count($this->joins) > 0) {
-//            $count = 'distinct ifnull(' . implode(', \'\'),ifnull(', $fieldsNoAlias) . ', \'\')';
-//        } else {
-//            $count = '*';
-//        }
-//        $sql = 'select count(' . $count . ') as total from ' . implode(',', $tables) . ' ' . implode(' ', $this->joins) . $where;
-
+        if (count($this->joins) > 0) {
+            $count = 'distinct ifnull(' . implode(', \'\'),ifnull(', $fieldsNoAlias) . ', \'\')';
+        } else {
+            $count = '*';
+        }
+        $sql = 'select count(*) as total from ' . implode(',', $tables) . ' ' . implode(' ', $this->joins) . $where;
+//        dump($sql);
         $bounds = array();
 
         foreach ($this->bounds as $key => $val) {
@@ -129,19 +132,19 @@ class QueryBuilder {
                 $bounds[$key] = $val;
             }
         }
-//        if ($stmt = DB::getDBConnection()->prepare($sql)) {
-//            if ($stmt->execute($bounds) && $stmt->rowCount() > 0) {
-//                $result = $stmt->fetchObject();
-//                $this->totalRows = $result->total;
-//                $this->totalPages = $this->rows > 0 ? ceil($this->totalRows / $this->rows) : 1;
-//            } else {
-//                return array();
-//                dd($stmt);
-//            }
-//        }
+        if ($stmt = $this->con->prepare($sql)) {
+            if ($stmt->execute($bounds) && $stmt->rowCount() > 0) {
+                $result = $stmt->fetchObject();
+                $this->totalRows = $result->total;
+                $this->totalPages = $this->rows > 0 ? ceil($this->totalRows / $this->rows) : 1;
+            } else {
+                dd($stmt);
+                return array();
+            }
+        }
 
         $limit = '';
-        if ($this->page > 0 && $this->rows > 0) {
+        if($this->page > 0 && $this->rows > 0){
             $limit = ' LIMIT :limit OFFSET :offset';
             $offset = $this->page > 0 ? ($this->page - 1) * $this->rows : $this->offset;
             $this->bounds[':offset'] = array($offset, DB::PARAM_INT);
@@ -155,16 +158,18 @@ class QueryBuilder {
 
         $fields = array_merge($fields, $this->orderBy);
         $str_fields = str_replace(' desc', '', str_replace(' asc', '', implode(',', $fields)));
-        $sql = 'select SQL_CALC_FOUND_ROWS ' . $str_fields . ' from ' . implode(',', $tables) . ' ' . implode(' ', $this->joins) . $where . $orderBy . $limit;
-        if ($stmt = DB::getDBConnection()->prepare($sql)) {
+        $sql = 'select distinct ' . $str_fields . ' from ' . implode(',', $tables) . ' ' . implode(' ', $this->joins) . $where . $orderBy . $limit;
+//                dump($sql);
+
+        if ($stmt = $this->con->prepare($sql)) {
 
             if ($stmt->execute($this->bounds) && $stmt->rowCount() > 0) {
-                $stm = DB::getDBConnection()->prepare('SELECT FOUND_ROWS() as total;');
-                $stm->execute();
-                $r = $stm->fetchObject();
-                $this->totalRows = $r->total;
-                $this->totalPages = $this->rows > 0 ? ceil($this->totalRows / $this->rows) : 1;
-
+//                $stm = $this->con->prepare('SELECT FOUND_ROWS() as total;');
+//                $stm->execute();
+//                $r = $stm->fetchObject();
+//                $this->totalRows = $r->total;
+//                $this->totalPages = $this->rows > 0 ? ceil($this->totalRows / $this->rows) : 1;
+                
                 while ($result = $stmt->fetchObject()) {
                     $class = $classThis;
                     $object = new $class;
@@ -396,7 +401,7 @@ class QueryBuilder {
         $i = 0;
         while ($auxClass != 'Hypersistence') {
             Engine::init($auxClass);
-            $table = '`' . Engine::$map[$auxClass]['table'] . '`';
+            $table = '"' . Engine::$map[$auxClass]['table'] . '"';
             $char = $this->chars[$i];
             $pk = Engine::getPk($auxClass);
             $join = 'left join ' . $table . ' ' . $alias . $char . ' on(' . $alias . $char . '.' . $pk['column'] . ' = ' . $classAlias . '.' . $property['column'] . ')';
@@ -413,9 +418,6 @@ class QueryBuilder {
                     }
                     break 2;
                 }
-            }
-            if (isset(Engine::$map[$auxClass]['joinColumn'])) {
-                $property['column'] = Engine::$map[$auxClass]['joinColumn'];
             }
             $auxClass = Engine::$map[$auxClass]['parent'];
             $i++;
@@ -434,7 +436,7 @@ class QueryBuilder {
         $i = 0;
         while ($auxClass != 'Hypersistence') {
             Engine::init($auxClass);
-            $table = '`' . Engine::$map[$auxClass]['table'] . '`';
+            $table = '"' . Engine::$map[$auxClass]['table'] . '"';
             $char = $this->chars[$i];
             $pk = Engine::getPk($auxClass);
             $join = 'left join ' . $table . ' ' . $alias . $char . ' on(' . $alias . $char . '.' . $pk['column'] . ' = ' . $classAlias . '.' . $property['column'] . ')';
@@ -445,7 +447,7 @@ class QueryBuilder {
                 if ($p['var'] == $var) {
                     $p['i'] = $i;
                     if ($p['relType'] == Engine::MANY_TO_ONE) {
-                        $this->joinPersonalFilter($auxClass, $p, $parts, $opperation, $value, $classAlias, $alias);
+                        $this->joinPersonalFilter($auxClass, $p, $parts, $classAlias, $alias);
                     } else {
                         if ("in" == strtolower($opperation)) {
                             $filter = $alias . $char . '.' . $p['column'] . " $opperation " . $value;
@@ -480,7 +482,7 @@ class QueryBuilder {
             Engine::init($auxClass);
 
             $auxClass = ltrim($auxClass, '\\');
-            $table = '`' . Engine::$map[$auxClass]['table'] . '`';
+            $table = '"' . Engine::$map[$auxClass]['table'] . '"';
             $char = $this->chars[$i];
             $pk = Engine::getPk($auxClass);
             if ($property['relType'] == Engine::MANY_TO_ONE) {
@@ -488,7 +490,7 @@ class QueryBuilder {
             } else if ($property['relType'] == Engine::ONE_TO_MANY) {
                 $join = 'left join ' . $table . ' ' . $alias . $char . ' on(' . $alias . $char . '.' . $property['joinColumn'] . ' = ' . $classAlias . '.' . $pk['column'] . ')';
             } else if ($property['relType'] == Engine::MANY_TO_MANY) {
-                $joinTable = '`' . $property['joinTable'] . '`';
+                $joinTable = '"' . $property['joinTable'] . '"';
                 $joinPk = Engine::getPk($property['itemClass']);
                 $join = 'left join ' . $joinTable . ' ' . $alias . $char . '_j' . ' on(' . $alias . $char . '_j' . '.' . $property['joinColumn'] . ' = ' . $classAlias . '.' . $pk['column'] . ')'
                         . ' left join ' . $table . ' ' . $alias . $char . ' on(' . $alias . $char . '.' . $joinPk['column'] . ' = ' . $alias . $char . '_j' . '.' . $property['inverseJoinColumn'] . ')';
@@ -499,15 +501,6 @@ class QueryBuilder {
             $this->joins[md5($join)] = $join;
             $classAlias = $alias . $char;
 
-            $getPkField = 'get' . $pk['var'];
-            $value = $object->$getPkField();
-            if (!is_null($value) && $value != 0 && !empty($value)) {
-                $filter = $alias . $char . '.' . $pk['column'] . ' = :' . $alias . $char . '_' . $pk['column'];
-                $this->filters[md5($filter)] = $filter;
-                $this->bounds[':' . $alias . $char . '_' . $pk['column']] = $value;
-                return;
-            }
-            
             $property = $pk;
             $last = Engine::$map[$auxClass];
             foreach (Engine::$map[$auxClass]['properties'] as $p) {
@@ -519,7 +512,8 @@ class QueryBuilder {
                     if ($p['relType'] == Engine::MANY_TO_ONE || $p['relType'] == Engine::ONE_TO_MANY) {
                         $this->joinFilter($auxClass, $p, $value, $classAlias, $alias);
                     } else if ($p['relType'] != Engine::MANY_TO_MANY && $p['relType'] != Engine::ONE_TO_MANY) {
-                        if (is_numeric($value)) {
+                        $mode = $p['searchMode'];
+                        if (is_numeric($value) || $mode === '') {
                             $filter = $alias . $char . '.' . $p['column'] . ' = :' . $alias . $char . '_' . $p['column'];
                             $this->filters[md5($filter)] = $filter;
                             $this->bounds[':' . $alias . $char . '_' . $p['column']] = $value;
