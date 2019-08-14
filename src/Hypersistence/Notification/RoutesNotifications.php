@@ -18,17 +18,17 @@ trait RoutesNotifications {
     public function notify($instance) {
 
         $notification = new Notification();
-        $user = $this;
+        $class = $this;
         $notification->setType(get_class($instance));
-        $notification->setData(json_encode($instance->toDatabase($user)));
-        $notification->setNotifiableId($user->getId());
-        $notification->setNotifiableType($this->getTableName());
+        $notification->setData(json_encode($instance->toDatabase($class)));
+        $notification->setNotifiableId($class->getId());
+        $notification->setNotifiableType($class->getTableName());
         $notification->setCreatedAt(date("Y-m-d H:i:s"));
         if (!$notification->save()) {
             abort(500, "Erro ao valvar notificação.");
         } else {
             Hypersistence::commit();
-            return true;
+            return $notification->getId();
         }
     }
 

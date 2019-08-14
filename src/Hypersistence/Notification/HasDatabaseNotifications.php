@@ -8,10 +8,10 @@ trait HasDatabaseNotifications {
      * Get the entity's notifications.
      */
     public function notifications() {
-        $user = $this;
+        $class = $this;
         $n = new \Hypersistence\Notifications\Notification();
-        $n->setNotifiableId($user->getId());
-        $n->setNotifiableType($this->getTableName());
+        $n->setNotifiableId($class->getId());
+        $n->setNotifiableType($class->getTableName());
         $prepare = $n->search();
         $prepare->orderBy('id', 'desc');
         $list = $prepare->execute();
@@ -22,10 +22,10 @@ trait HasDatabaseNotifications {
      * Get the entity's read notifications.
      */
     public function totalNotifications($read = null) {
-        $user = $this;
+        $class = $this;
         $n = new \Hypersistence\Notifications\Notification();
-        $n->setNotifiableId($user->getId());
-        $n->setNotifiableType($this->getTableName());
+        $n->setNotifiableId($class->getId());
+        $n->setNotifiableType($class->getTableName());
         $prepare = $n->search()->setPage(1)->setRows(1);
         if (!is_null($read)) {
             if ($read) {
