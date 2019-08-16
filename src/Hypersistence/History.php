@@ -20,6 +20,7 @@ class History extends Hypersistence {
 
     /**
      * @column(reference_table)
+     * @searchMode()
      */
     private $referenceTable;
 
