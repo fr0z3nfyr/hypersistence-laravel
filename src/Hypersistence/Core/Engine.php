@@ -33,8 +33,9 @@ class Engine {
     private static $TAG_AUDITABLE = 'auditable';
     private static $TAG_AUDITABLE_FIELD = 'auditableField';
 
+
     /**
-     * 
+     *
      * @return boolean
      */
     public function isLoaded() {
@@ -288,7 +289,7 @@ class Engine {
         while ($class != '' && $class != 'Hypersistence') {
             $alias = $aliases[$i];
             $class = ltrim($class, '\\');
-            $tables[] = '`' . self::$map[$class][self::$TAG_TABLE] . '` ' . $alias;
+            $tables[] = DB::ec() . self::$map[$class][self::$TAG_TABLE] . DB::ec() . ' ' . $alias;
 
             if (self::$map[$class]['parent'] != 'Hypersistence') {
                 $parent = self::$map[$class]['parent'];
@@ -413,7 +414,7 @@ class Engine {
         $i = 0;
         while ($class != '' && $class != 'Hypersistence') {
             $class = ltrim($class, '\\');
-            $table = '`' . self::$map[$class][self::$TAG_TABLE] . '`';
+            $table = DB::ec() . self::$map[$class][self::$TAG_TABLE] . DB::ec();
             $tables[] = $table;
             $parent = self::$map[$class]['parent'];
             if ($parent != 'Hypersistence') {
@@ -460,7 +461,7 @@ class Engine {
         $i = 0;
         while ($class != '' && $class != 'Hypersistence') {
             $class = ltrim($class, '\\');
-            $table = '`' . self::$map[$class][self::$TAG_TABLE] . '`';
+            $table = DB::ec() . self::$map[$class][self::$TAG_TABLE] . DB::ec();
             $tables[] = $table;
             $parent = self::$map[$class]['parent'];
             if ($parent != 'Hypersistence') {
@@ -489,7 +490,7 @@ class Engine {
     }
 
     /**
-     * 
+     *
      * @return boolean
      */
     public function save() {
@@ -550,7 +551,7 @@ class Engine {
                 }
 
                 if (count($fields)) {
-                    $sql = 'update `' . self::$map[$class][self::$TAG_TABLE] . '` set ' . implode(',', $fields) . ' where ' . $where;
+                    $sql = 'update ' . DB::ec() . self::$map[$class][self::$TAG_TABLE] . DB::ec() . ' set ' . implode(',', $fields) . ' where ' . $where;
                 }
             } else {//INSERT
                 $values = array();
@@ -564,6 +565,9 @@ class Engine {
                 }
 
                 foreach ($properties as $p) {
+                    if ($p['var'] == $this->getPrimaryKeyField()) {
+                        continue;
+                    }
                     if ($p['relType'] != self::MANY_TO_MANY && $p['relType'] != self::ONE_TO_MANY) {
                         $get = 'get' . $p['var'];
                         $fields[] = $p[self::$TAG_COLUMN];
@@ -586,7 +590,7 @@ class Engine {
                 }
 
                 if (count($fields)) {
-                    $sql = 'insert into `' . self::$map[$class][self::$TAG_TABLE] . '` (' . implode(',', $fields) . ') values (' . implode(',', $values) . ')';
+                    $sql = 'insert into ' . DB::ec() . self::$map[$class][self::$TAG_TABLE] . DB::ec() . ' (' . implode(',', $fields) . ') values (' . implode(',', $values) . ')';
                 }
             }
             if ($sql != '') {
@@ -604,10 +608,12 @@ class Engine {
                             }
                         }
                     } else {
+                       dd($sql);
                         $this->sqlErrorInfo[] = $stmt->errorInfo();
                         return false;
                     }
                 } else {
+                   dd($sql);
                     $this->sqlErrorInfo[] = DB::getDBConnection()->errorInfo();
                     return false;
                 }
@@ -750,7 +756,7 @@ class Engine {
     }
 
     /**
-     * 
+     *
      * @return QueryBuilder
      */
     public function search() {
@@ -758,7 +764,7 @@ class Engine {
     }
 
     /**
-     * 
+     *
      * @param array $property
      * @return QueryBuilder
      */
@@ -785,7 +791,7 @@ class Engine {
                         $obj = $arguments[0];
                         if ($obj instanceof $class) {
                             $obj->load();
-                            $table = '`' . $property['joinTable'] . '`';
+                            $table = DB::ec() . $property['joinTable'] . DB::ec();
                             $inverseColumn = $property[self::$TAG_INVERSE_JOIN_COLUMN];
                             $column = $property[self::$TAG_JOIN_COLUMN];
 
@@ -995,7 +1001,7 @@ class Engine {
         }
         return $p;
     }
-    
+
     public static function loadById($id) {
         $r = new \ReflectionClass(get_called_class());
 

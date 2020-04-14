@@ -26,7 +26,7 @@ class QueryBuilder {
     }
 
     /**
-     * 
+     *
      * @return array|Hypersistence
      */
     public function execute() {
@@ -52,7 +52,7 @@ class QueryBuilder {
             $srcId = $this->srcObject->$srcGet();
             $pk = Engine::getPk($class);
 
-            $tables[] = '`' . $this->property['joinTable'] . '`';
+            $tables[] = DB::ec() . $this->property['joinTable'] . DB::ec();
             $filter = $this->property['joinTable'] . '.' . $this->property['joinColumn'] . ' = :' . $this->property['joinTable'] . '_' . $this->property['joinColumn'];
             $this->filters[md5($filter)] = $filter;
             $this->bounds[':' . $this->property['joinTable'] . '_' . $this->property['joinColumn']] = $srcId;
@@ -65,7 +65,7 @@ class QueryBuilder {
         while ($class != 'Hypersistence') {
             $alias = str_replace('\\', '', $this->chars[$i]);
             $class = ltrim($class, '\\');
-            $joinTable = '`' . Engine::$map[$class]['table'] . '` ' . $alias;
+            $joinTable = DB::ec() . Engine::$map[$class]['table'] . DB::ec() . ' ' . $alias;
             if ($i == 0) {
                 $tables[] = $joinTable;
             } else {
@@ -115,12 +115,14 @@ class QueryBuilder {
         else
             $where = '';
 
-//        if (count($this->joins) > 0) {
-//            $count = 'distinct ifnull(' . implode(', \'\'),ifnull(', $fieldsNoAlias) . ', \'\')';
-//        } else {
-//            $count = '*';
-//        }
-//        $sql = 'select count(' . $count . ') as total from ' . implode(',', $tables) . ' ' . implode(' ', $this->joins) . $where;
+       if(config("database.default") == 'pgsql'){
+          if (count($this->joins) > 0) {
+              $count = 'distinct ifnull(' . implode(', \'\'),ifnull(', $fieldsNoAlias) . ', \'\')';
+          } else {
+              $count = '*';
+          }
+          $sql = 'select count(' . $count . ') as total from ' . implode(',', $tables) . ' ' . implode(' ', $this->joins) . $where;
+       }
 
         $bounds = array();
 
@@ -129,16 +131,21 @@ class QueryBuilder {
                 $bounds[$key] = $val;
             }
         }
-//        if ($stmt = DB::getDBConnection()->prepare($sql)) {
-//            if ($stmt->execute($bounds) && $stmt->rowCount() > 0) {
-//                $result = $stmt->fetchObject();
-//                $this->totalRows = $result->total;
-//                $this->totalPages = $this->rows > 0 ? ceil($this->totalRows / $this->rows) : 1;
-//            } else {
-//                return array();
-//                dd($stmt);
-//            }
-//        }
+        $calc_rows = '';
+        if(config("database.default") == 'pgsql'){
+          if ($stmt = DB::getDBConnection()->prepare($sql)) {
+              if ($stmt->execute($bounds) && $stmt->rowCount() > 0) {
+                  $result = $stmt->fetchObject();
+                  $this->totalRows = $result->total;
+                  $this->totalPages = $this->rows > 0 ? ceil($this->totalRows / $this->rows) : 1;
+              } else {
+                  return array();
+                  dd($stmt);
+              }
+          }
+       } else {
+          $calc_rows = 'SQL_CALC_FOUND_ROWS ';
+       }
 
         $limit = '';
         if ($this->page > 0 && $this->rows > 0) {
@@ -155,16 +162,17 @@ class QueryBuilder {
 
         $fields = array_merge($fields, $this->orderBy);
         $str_fields = str_replace(' desc', '', str_replace(' asc', '', implode(',', $fields)));
-        $sql = 'select SQL_CALC_FOUND_ROWS ' . $str_fields . ' from ' . implode(',', $tables) . ' ' . implode(' ', $this->joins) . $where . $orderBy . $limit;
+        $sql = "select $calc_rows" . $str_fields . ' from ' . implode(',', $tables) . ' ' . implode(' ', $this->joins) . $where . $orderBy . $limit;
         if ($stmt = DB::getDBConnection()->prepare($sql)) {
 
             if ($stmt->execute($this->bounds) && $stmt->rowCount() > 0) {
+               if(config("database.default") != 'pgsql'){
                 $stm = DB::getDBConnection()->prepare('SELECT FOUND_ROWS() as total;');
                 $stm->execute();
                 $r = $stm->fetchObject();
                 $this->totalRows = $r->total;
                 $this->totalPages = $this->rows > 0 ? ceil($this->totalRows / $this->rows) : 1;
-
+            }
                 while ($result = $stmt->fetchObject()) {
                     $class = $classThis;
                     $object = new $class;
@@ -264,7 +272,7 @@ class QueryBuilder {
     }
 
     /**
-     * 
+     *
      * @param string $orderBy
      * @param string $orderDirection
      * @return \HypersistenceResultSet
@@ -290,7 +298,7 @@ class QueryBuilder {
     }
 
     /**
-     * 
+     *
      * @param string $property
      * @param string $value
      * @param string $opperation
@@ -396,7 +404,7 @@ class QueryBuilder {
         $i = 0;
         while ($auxClass != 'Hypersistence') {
             Engine::init($auxClass);
-            $table = '`' . Engine::$map[$auxClass]['table'] . '`';
+            $table = DB::ec() . Engine::$map[$auxClass]['table'] . DB::ec();
             $char = $this->chars[$i];
             $pk = Engine::getPk($auxClass);
             $join = 'left join ' . $table . ' ' . $alias . $char . ' on(' . $alias . $char . '.' . $pk['column'] . ' = ' . $classAlias . '.' . $property['column'] . ')';
@@ -434,7 +442,7 @@ class QueryBuilder {
         $i = 0;
         while ($auxClass != 'Hypersistence') {
             Engine::init($auxClass);
-            $table = '`' . Engine::$map[$auxClass]['table'] . '`';
+            $table = DB::ec() . Engine::$map[$auxClass]['table'] . DB::ec();
             $char = $this->chars[$i];
             $pk = Engine::getPk($auxClass);
             $join = 'left join ' . $table . ' ' . $alias . $char . ' on(' . $alias . $char . '.' . $pk['column'] . ' = ' . $classAlias . '.' . $property['column'] . ')';
@@ -480,7 +488,7 @@ class QueryBuilder {
             Engine::init($auxClass);
 
             $auxClass = ltrim($auxClass, '\\');
-            $table = '`' . Engine::$map[$auxClass]['table'] . '`';
+            $table = DB::ec() . Engine::$map[$auxClass]['table'] . DB::ec();
             $char = $this->chars[$i];
             $pk = Engine::getPk($auxClass);
             if ($property['relType'] == Engine::MANY_TO_ONE) {
@@ -488,7 +496,7 @@ class QueryBuilder {
             } else if ($property['relType'] == Engine::ONE_TO_MANY) {
                 $join = 'left join ' . $table . ' ' . $alias . $char . ' on(' . $alias . $char . '.' . $property['joinColumn'] . ' = ' . $classAlias . '.' . $pk['column'] . ')';
             } else if ($property['relType'] == Engine::MANY_TO_MANY) {
-                $joinTable = '`' . $property['joinTable'] . '`';
+                $joinTable = DB::ec() . $property['joinTable'] . DB::ec();
                 $joinPk = Engine::getPk($property['itemClass']);
                 $join = 'left join ' . $joinTable . ' ' . $alias . $char . '_j' . ' on(' . $alias . $char . '_j' . '.' . $property['joinColumn'] . ' = ' . $classAlias . '.' . $pk['column'] . ')'
                         . ' left join ' . $table . ' ' . $alias . $char . ' on(' . $alias . $char . '.' . $joinPk['column'] . ' = ' . $alias . $char . '_j' . '.' . $property['inverseJoinColumn'] . ')';
@@ -507,7 +515,7 @@ class QueryBuilder {
                 $this->bounds[':' . $alias . $char . '_' . $pk['column']] = $value;
                 return;
             }
-            
+
             $property = $pk;
             $last = Engine::$map[$auxClass];
             foreach (Engine::$map[$auxClass]['properties'] as $p) {
@@ -561,7 +569,7 @@ class QueryBuilder {
     }
 
     /**
-     * 
+     *
      * @param int $rows
      * @return \HypersistenceResultSet
      */
@@ -571,7 +579,7 @@ class QueryBuilder {
     }
 
     /**
-     * 
+     *
      * @param int $offset
      * @return \HypersistenceResultSet
      */
@@ -581,7 +589,7 @@ class QueryBuilder {
     }
 
     /**
-     * 
+     *
      * @param int $page
      * @return \HypersistenceResultSet
      */
@@ -599,7 +607,7 @@ class QueryBuilder {
     }
 
     /**
-     * 
+     *
      * @return array|Hypersistence
      */
     public function getResultList() {
