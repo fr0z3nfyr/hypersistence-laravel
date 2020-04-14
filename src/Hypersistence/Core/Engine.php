@@ -608,12 +608,10 @@ class Engine {
                             }
                         }
                     } else {
-                       dd($sql);
                         $this->sqlErrorInfo[] = $stmt->errorInfo();
                         return false;
                     }
                 } else {
-                   dd($sql);
                     $this->sqlErrorInfo[] = DB::getDBConnection()->errorInfo();
                     return false;
                 }
