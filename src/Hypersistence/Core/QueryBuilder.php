@@ -117,7 +117,7 @@ class QueryBuilder {
 
        if(config("database.default") == 'pgsql'){
           if (count($this->joins) > 0) {
-              $count = 'distinct ifnull(' . implode(', \'\'),ifnull(', $fieldsNoAlias) . ', \'\')';
+              $count = 'distinct(COALESCE( cast(' . implode(' as varchar), \'\'),COALESCE(cast(', $fieldsNoAlias) . ' as varchar), \'\'))';
           } else {
               $count = '*';
           }
