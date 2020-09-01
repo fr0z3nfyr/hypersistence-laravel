@@ -618,11 +618,20 @@ class Engine {
             }
         }
         $changes = $this->checkChanges($classThis, $classes, $objOld);
-        return $this->saveChanges($changes);
+        if(count($changes) > 0){
+            return $this->saveChanges($changes);
+        }
+        return true;
     }
 
     private function saveChanges($changes) {
-        $stmt = DB::getDBConnection()->prepare("SHOW TABLES LIKE 'history'");
+        $driver = config("database.default");
+        if ($driver == 'pgsql'){
+           $sql = "SHOW TABLES LIKE 'history'";
+        } else {
+           $sql "\dt *history*";
+        }
+        $stmt = DB::getDBConnection()->prepare($sql);
         $stmt->execute();
         if ($stmt->rowCount() == 0 && count($changes) > 0) {
             throw new \Exception('Table history no exists! Please, execute in console the follow command [php artisan hypersistence:make-history-table]');
