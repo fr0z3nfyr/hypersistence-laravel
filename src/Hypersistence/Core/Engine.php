@@ -627,9 +627,9 @@ class Engine {
     private function saveChanges($changes) {
         $driver = config("database.default");
         if ($driver == 'pgsql'){
-           $sql = "SHOW TABLES LIKE 'history'";
+          $sql "\dt *history*";
         } else {
-           $sql "\dt *history*";
+          $sql = "SHOW TABLES LIKE 'history'";
         }
         $stmt = DB::getDBConnection()->prepare($sql);
         $stmt->execute();
